@@ -1,18 +1,17 @@
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-
-import { authenticate } from "./auth-store";
+import { authenticate } from "../src/auth-store";
 
 export default function Index() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // O botão só estará habilitado se ambos os campos tiverem conteúdo
   const isFormValid = email.trim() !== "" && password.trim() !== "";
 
   const handleLogin = () => {
+    console.log("Email digitado:", email, "| Senha digitada:", password);
     if (!authenticate(email, password)) {
       Alert.alert("Dados inválidos", "Verifique seu e-mail e senha ou crie uma conta.");
       return;
@@ -22,31 +21,45 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+      {/* Box contêiner para limitar a largura no Desktop */}
+      <Stack.Screen options={{ title: "Örtöö" }} />
+      <View style={styles.formCard}>
+        <Text style={styles.title}>Login</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="E-mail"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="E-mail"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Senha"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Senha"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
 
-      <TouchableOpacity style={[styles.button, !isFormValid && styles.disabled]} onPress={handleLogin} disabled={!isFormValid}>
-        <Text style={styles.buttonText}>Entrar</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => router.push("/recuperar-senha")}><Text style={styles.link}>Esqueci minha senha</Text></TouchableOpacity>
-      <TouchableOpacity onPress={() => router.push("/cadastro")}><Text style={styles.link}>Criar conta</Text></TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, !isFormValid && styles.disabled]}
+          onPress={handleLogin}
+          disabled={!isFormValid}
+        >
+          <Text style={styles.buttonText}>Entrar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push("/recuperar-senha")}>
+          <Text style={styles.link}>Esqueci minha senha</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push("/cadastro")}>
+          <Text style={styles.link}>Criar conta</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -55,8 +68,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
+    alignItems: "center", // Centraliza o card na horizontal em telas grandes
     paddingHorizontal: 24,
     backgroundColor: "#fff",
+  },
+  formCard: {
+    width: "100%",      // Ocupa 100% da largura em telas pequenas (mobile)
+    maxWidth: 400,     // Trava a largura máxima em 400px no computador
   },
   title: {
     fontSize: 28,
