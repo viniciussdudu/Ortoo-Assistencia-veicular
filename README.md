@@ -1,50 +1,57 @@
-# Welcome to your Expo app 👋
+#  ÖRTÖÖ — Assistência Veicular Sob Demanda
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+> **Mobilidade, segurança e resposta rápida na palma da sua mão.**
 
-## Get started
+O **ÖRTÖÖ** é uma plataforma de assistência veicular sob demanda que conecta, por meio da geolocalização em tempo real, motoristas em situações de emergência a prestadores de serviços automotivos próximos, de forma rápida, transparente e totalmente sem a necessidade de mensalidades ou contratos engessados.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+##  O Problema
 
-2. Start the app
+Imprevistos no trânsito — como pneu furado, falta de combustível (pane seca), bateria descarregada ou falhas mecânicas — geram alto estresse e vulnerabilidade para os condutores. O modelo tradicional de assistência veicular enfrenta sérios gargalos:
 
-   ```bash
-   npx expo start
-   ```
+* ** Demora no atendimento:** Longos períodos de espera por guinchos ou mecânicos sem estimativa precisa.
+* ** Burocracia e Custos Fixos:** Obrigatoriedade de assinaturas mensais ou anuais em seguros e associações, mesmo para quem raramente utiliza o serviço.
+* ** Falta de Transparência:** Dificuldade em rastrear a localização do prestador em tempo real e incerteza sobre os prazos de chegada.
 
-In the output, you'll find options to open the app in a
+O **ÖRTÖÖ** resolve essa dor ao transformar a assistência veicular em um serviço moderno **sob demanda (*pay-per-use*)**, acionado diretamente pelo smartphone.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+##  Quem Nós Somos
 
-## Get a fresh project
+Somos uma solução tecnológica focada em **mobilidade, segurança e eficiência**. Atuamos como a ponte inteligente entre quem precisa de socorro imediato nas ruas e os profissionais capacitados para resolver o problema, utilizando geolocalização precisa para otimizar o tempo de resposta e reduzir custos operacionais.
 
-When you're ready, run:
+---
 
-```bash
-npm run reset-project
-```
+##  Origem do Nome
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+A palavra **ÖRTÖÖ** (pronuncia-se *Ortô*) tem origem no antigo Império Mongol. O *Örtöö* era um eficiente sistema postal de postos de rota e mensageiros criado para cobrir grandes distâncias, garantindo socorro, suprimentos e comunicação rápida aos viajantes ao longo do caminho.
 
-## Learn more
+Resgatamos essa essência histórica de **suporte, conexão e prontidão em rotas** para dar vida à nossa plataforma.
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+##  Público-Alvo
 
-## Join the community
+Nossa plataforma atende de forma integrada às duas pontas do ecossistema:
 
-Join our community of developers creating universal apps.
+###  Usuários & Condutores
+* **Condutores sem seguro:** Donos de carros e motos que não possuem apólice tradicional.
+* **Motoristas de aplicativo e entregadores:** Profissionais que dependem do veículo e não podem perder tempo de trabalho parados.
+* **Viajantes e motoristas casuais:** Pessoas que buscam previsibilidade, segurança e ajuda rápida em viagens ou deslocamentos diários.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+###  Prestadores de Serviço
+* Guinchos autônomos, chaveiros, mecânicos móveis, borracharias e socorristas de bateria que desejam expandir sua cartela de clientes e rentabilizar horários ociosos.
+
+---
+
+## 👥 Equipe de Desenvolvimento
+
+| Integrante | GitHub |
+| :--- | :--- |
+| **Vinicius Silveira** | [@viniciussdudu](https://github.com/viniciussdudu) |
+| **Arthur Bispo** | [@bispo047](https://github.com/bispo047) |
+| **Klaus** | [@Klaus1215](https://github.com/Klaus1215) |
+
+---
