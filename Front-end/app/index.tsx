@@ -6,15 +6,22 @@ export default function Index() {
   const router = useRouter();
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: "Örtöö" }} />
-      <View style={styles.formCard}>
-        <Text style={styles.title}>Login</Text>
-        <Text style={styles.subtitle}>O acesso por login será disponibilizado em breve.</Text>
+    <Stack.Screen options={{ title: "Örtöö" }} />
+    <View style={styles.formCard}>
+    <Text style={styles.title}>Login</Text>
+    <Text style={styles.subtitle}>O acesso por login será disponibilizado em breve.</Text>
 
-        <TouchableOpacity style={styles.button} onPress={() => router.push("/cadastro")}>
-          <Text style={styles.buttonText}>Criar conta</Text>
-        </TouchableOpacity>
-      </View>
+    <TouchableOpacity style={styles.button} onPress={() => router.push("/cadastro")}>
+    <Text style={styles.buttonText}>Criar conta</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+    style={styles.secondaryButton}
+    onPress={() => router.push("/recuperar-senha")}
+    >
+    <Text style={styles.secondaryButtonText}>Esqueci minha senha</Text>
+    </TouchableOpacity>
+    </View>
     </View>
   );
 }
@@ -28,8 +35,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   formCard: {
-    width: "100%",      // Ocupa 100% da largura em telas pequenas (mobile)
-    maxWidth: 400,     // Trava a largura máxima em 400px no computador
+    width: "100%",
+    maxWidth: 400,
   },
   title: {
     fontSize: 28,
@@ -37,7 +44,22 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: "center",
   },
-  button: { backgroundColor: "#2563eb", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
+  button: {
+    backgroundColor: "#2563eb",
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  secondaryButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  secondaryButtonText: {
+    color: "#2563eb",
+    fontSize: 15,
+    fontWeight: "500",
+  },
   subtitle: { color: "#666", fontSize: 15, textAlign: "center", lineHeight: 22, marginBottom: 24 },
 });
