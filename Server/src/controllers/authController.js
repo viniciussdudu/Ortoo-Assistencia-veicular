@@ -1,5 +1,5 @@
-const bcrypt = require('bcryptjs');
-const db = require('../config/db');
+const bcrypt = require("bcryptjs");
+const db = require("../config/db");
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -7,35 +7,39 @@ function isValidCpf(cpf) {
   if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
 
   const calculateDigit = (base, factor) => {
-    const sum = base.split('').reduce((total, digit) => total + Number(digit) * factor--, 0);
+    const sum = base
+      .split("")
+      .reduce((total, digit) => total + Number(digit) * factor--, 0);
     const remainder = (sum * 10) % 11;
     return remainder === 10 ? 0 : remainder;
   };
 
-  return calculateDigit(cpf.slice(0, 9), 10) === Number(cpf[9])
-    && calculateDigit(cpf.slice(0, 10), 11) === Number(cpf[10]);
+  return (
+    calculateDigit(cpf.slice(0, 9), 10) === Number(cpf[9]) &&
+    calculateDigit(cpf.slice(0, 10), 11) === Number(cpf[10])
+  );
 }
 
 function validateRegistration(body) {
   const nome = body?.nome?.trim();
   const email = body?.email?.trim().toLowerCase();
   const password = body?.password;
-  const documento = body?.documento?.replace(/\D/g, '');
+  const documento = body?.documento?.replace(/\D/g, "");
 
   if (!nome || !email || !password || !documento) {
-    return { error: 'Nome, e-mail, CPF e senha são obrigatórios.' };
+    return { error: "Nome, e-mail, CPF e senha são obrigatórios." };
   }
 
   if (!EMAIL_PATTERN.test(email)) {
-    return { error: 'Informe um e-mail válido.' };
+    return { error: "Informe um e-mail válido." };
   }
 
   if (!/^\d{6}$/.test(password)) {
-    return { error: 'A senha deve ter exatamente 6 dígitos numéricos.' };
+    return { error: "A senha deve ter exatamente 6 dígitos numéricos." };
   }
 
   if (!isValidCpf(documento)) {
-    return { error: 'Informe um CPF válido.' };
+    return { error: "Informe um CPF válido." };
   }
 
   return { nome, email, password, documento };
@@ -61,8 +65,10 @@ async function register(req, res, next) {
       email: data.email,
     });
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ erro: 'Já existe uma conta com este e-mail ou CPF.' });
+    if (error.code === "ER_DUP_ENTRY") {
+      return res
+        .status(409)
+        .json({ erro: "Já existe uma conta com este e-mail ou CPF." });
     }
 
     return next(error);
@@ -70,3 +76,14 @@ async function register(req, res, next) {
 }
 
 module.exports = { register };
+
+async function logout(req, res) {
+  return res
+    .status(200)
+    .json({ sucesso: true, mensagem: "Sessão encerrada com sucesso." });
+}
+
+module.exports = {
+  register,
+  logout,
+};
