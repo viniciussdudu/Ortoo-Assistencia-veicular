@@ -4,6 +4,13 @@
 
 O **ÖRTÖÖ** é uma plataforma de assistência veicular sob demanda que conecta, por meio da geolocalização em tempo real, motoristas em situações de emergência a prestadores de serviços automotivos próximos, de forma rápida, transparente e totalmente sem a necessidade de mensalidades ou contratos engessados.
 
+## Estrutura do repositório
+
+- `Front-end/`: aplicativo Expo/React Native.
+- `Server/`: API Node.js e esquema do banco MySQL.
+
+Cada parte possui seu próprio `package.json`. Execute os comandos do aplicativo dentro de `Front-end/` e os comandos da API dentro de `Server/`.
+
 ---
 
 ##  O Problema

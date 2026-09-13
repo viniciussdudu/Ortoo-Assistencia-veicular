@@ -2,23 +2,35 @@ import { Stack, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-import { createAccount } from "../src/auth-store";
+import { ApiError, register } from "../src/services/api";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Cadastro() {
   const router = useRouter();
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const valid = email.trim() !== "" && password.trim().length >= 6 && confirmation.trim() !== "";
+  const valid = nome.trim() !== "" && EMAIL_PATTERN.test(email.trim()) && cpf.replace(/\D/g, "").length === 11 && /^\d{6}$/.test(password) && confirmation !== "";
 
-  const submit = () => {
+  const submit = async () => {
     if (password !== confirmation) return Alert.alert("Senhas diferentes", "Digite a mesma senha nos dois campos.");
-    const result = createAccount(email, password);
-    if (!result.ok) return Alert.alert("Não foi possível criar a conta", result.message);
-    Alert.alert("Conta criada", "Agora você pode entrar ou recuperar sua senha.", [
-      { text: "Ir para o login", onPress: () => router.replace("/") },
-    ]);
+    if (!EMAIL_PATTERN.test(email.trim())) return Alert.alert("E-mail inválido", "Informe um e-mail válido.");
+    if (!/^\d{6}$/.test(password)) return Alert.alert("Senha inválida", "A senha deve ter exatamente 6 dígitos numéricos.");
+
+    setSubmitting(true);
+    try {
+      await register({ nome, email, documento: cpf, password });
+      router.replace("/");
+    } catch (error) {
+      Alert.alert("Não foi possível criar a conta", error instanceof ApiError ? error.message : "Tente novamente.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -27,7 +39,14 @@ export default function Cadastro() {
 
       <View style={styles.formCard}>
         <Text style={styles.title}>Criar conta</Text>
-        <Text style={styles.subtitle}>Os dados ficam disponíveis apenas enquanto o app estiver aberto.</Text>
+        <Text style={styles.subtitle}>Informe seus dados para criar sua conta.</Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Nome completo"
+          value={nome}
+          onChangeText={setNome}
+        />
 
         <TextInput
           style={styles.input}
@@ -40,9 +59,17 @@ export default function Cadastro() {
         />
         <TextInput
           style={styles.input}
-          placeholder="Senha (mínimo 6 caracteres)"
+          placeholder="CPF"
+          value={cpf}
+          onChangeText={setCpf}
+          keyboardType="number-pad"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Senha (6 dígitos)"
           value={password}
           onChangeText={setPassword}
+          keyboardType="number-pad"
           secureTextEntry
         />
         <TextInput
@@ -50,15 +77,16 @@ export default function Cadastro() {
           placeholder="Confirmar senha"
           value={confirmation}
           onChangeText={setConfirmation}
+          keyboardType="number-pad"
           secureTextEntry
         />
 
         <TouchableOpacity
-          style={[styles.button, !valid && styles.disabled]}
+          style={[styles.button, (!valid || submitting) && styles.disabled]}
           onPress={submit}
-          disabled={!valid}
+          disabled={!valid || submitting}
         >
-          <Text style={styles.buttonText}>Criar conta</Text>
+          <Text style={styles.buttonText}>{submitting ? "Criando..." : "Criar conta"}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.back()}>
