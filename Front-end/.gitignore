@@ -30,10 +30,15 @@ yarn-error.*
 .DS_Store
 *.pem
 
+<<<<<<< HEAD
 # local environment files
 .env
 .env.*
 !.env.example
+=======
+# local env files
+.env*.local
+>>>>>>> Ortoo-proj/develop
 
 # typescript
 *.tsbuildinfo
