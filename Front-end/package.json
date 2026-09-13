@@ -43,5 +43,12 @@
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0"
   },
+<<<<<<< HEAD
+  "private": true,
+  "allowScripts": {
+    "unrs-resolver@1.12.2": true
+  }
+=======
   "private": true
+>>>>>>> Ortoo-proj/develop
 }
