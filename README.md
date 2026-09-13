@@ -4,13 +4,6 @@
 
 O **ÖRTÖÖ** é uma plataforma de assistência veicular sob demanda que conecta, por meio da geolocalização em tempo real, motoristas em situações de emergência a prestadores de serviços automotivos próximos, de forma rápida, transparente e totalmente sem a necessidade de mensalidades ou contratos engessados.
 
-## Estrutura do repositório
-
-- `Front-end/`: aplicativo Expo/React Native.
-- `Server/`: API Node.js e esquema do banco MySQL.
-
-Cada parte possui seu próprio `package.json`. Execute os comandos do aplicativo dentro de `Front-end/` e os comandos da API dentro de `Server/`.
-
 ---
 
 ##  O Problema
@@ -60,5 +53,8 @@ Nossa plataforma atende de forma integrada às duas pontas do ecossistema:
 | **Vinicius Silveira** | [@viniciussdudu](https://github.com/viniciussdudu) |
 | **Arthur Bispo** | [@bispo047](https://github.com/bispo047) |
 | **Klaus** | [@Klaus1215](https://github.com/Klaus1215) |
+| **Thiago Soares** | [@Soares314](https://github.com/Soares314) |
+| **Daniel Vinicius** | [@DrEggman00](https://github.com/DrEggman00) |
+| **Samara Coelho** | [@SamaraCdS-UFT](https://github.com/SamaraCdS-UFT) |
 
 ---
