@@ -57,6 +57,12 @@ export default function Index() {
       />
 
       <Button
+        title="recuperar senha"
+        onPress={() => router.push("/recuperar-senha")}
+      />
+
+
+      <Button
         title="Criar conta"
         onPress={() => router.push("/cadastro")}
       />

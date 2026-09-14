@@ -5,6 +5,22 @@ const solicitacaoController = require("../controllers/solicitacaoController");
 
 const router = express.Router();
 
+
+router.get("/status", async (req, res) => {
+  try {
+    await db.execute("SELECT 1");
+    return res.json({ status: "API Online", bancoConectado: true });
+  } catch (error) {
+    return res.status(500).json({ 
+      status: "API Online", 
+      bancoConectado: false, 
+      erro: error.message 
+    });
+  }
+});
+
+
+
 router.post("/auth/cadastro", authController.register);
 router.post("/auth/login", authController.login);
 router.post("/auth/logout", authController.logout);
