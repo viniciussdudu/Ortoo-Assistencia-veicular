@@ -11,6 +11,31 @@ export type RegisterInput = {
   documento: string;
 };
 
+// --- NOVAS TIPAGENS PARA O PERFIL ---
+export type Veiculo = {
+  modelo: string;
+  placa: string;
+  cor: string;
+};
+
+export type HistoricoAtendimento = {
+  id: string;
+  data: string;
+  problema: string;
+  status: string;
+};
+
+export type UserProfile = {
+  usuario: {
+    nome: string;
+    email: string;
+    telefone: string;
+  };
+  veiculo: Veiculo | null;
+  historico: HistoricoAtendimento[];
+};
+// -------------------------------------
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -28,12 +53,7 @@ function getApiUrl() {
   return apiUrl;
 }
 
-type RequestOptions = {
-  method?: "POST" | "PATCH";
-  body?: unknown;
-};
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   let response: Response;
 
   try {
@@ -42,7 +62,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       headers: {
         "Content-Type": "application/json",
       },
-      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+      ...(options.body === undefined
+        ? {}
+        : { body: JSON.stringify(options.body) }),
     });
   } catch {
     throw new ApiError("Não foi possível conectar à API.");
@@ -51,14 +73,30 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new ApiError(payload?.erro ?? "A API retornou um erro.", response.status);
+    throw new ApiError(
+      payload?.erro ?? "A API retornou um erro.",
+      response.status,
+    );
   }
 
   return payload as T;
 }
 
 export function register(input: RegisterInput) {
-  return request<RegisteredUser>("/auth/cadastro", { method: "POST", body: input });
+  return request<RegisteredUser>("/auth/cadastro", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function getUserProfile() {
+  // Nota: Altere "/usuario/perfil" se o seu backend usar outro caminho (ex: "/perfil" ou "/me")
+  return request<UserProfile>("/usuario/perfil");
+}
+
+export function logout() {
+  // Nota: Altere "/auth/logout" se o seu backend usar outro caminho
+  return request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
 }
 
 export function login(input: Pick<RegisterInput, "email" | "password">) {
