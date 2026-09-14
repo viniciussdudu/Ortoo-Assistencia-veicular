@@ -21,15 +21,10 @@ export class ApiError extends Error {
   }
 }
 
-const apiUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
+// FALLBACK: Garante a URL local caso a variável de ambiente não esteja definida
+const apiUrl = (process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
 
 function getApiUrl() {
-  if (!apiUrl) {
-    throw new ApiError(
-      "A API não foi configurada. Crie um arquivo .env a partir de .env.example.",
-    );
-  }
-
   return apiUrl;
 }
 
@@ -68,7 +63,8 @@ export function register(input: RegisterInput) {
 
 export function login(input: Pick<RegisterInput, "email" | "password">) {
   return request<RegisteredUser>("/auth/login", { method: "POST", body: input });
- 
+}
+
 export type RecuperarSenhaInput = {
   email: string;
   novaSenha: string;
@@ -79,12 +75,12 @@ export type RecuperarSenhaResponse = {
   mensagem: string;
 };
 
-// Adicione junto com export function register(...)
 export function recuperarSenha(input: RecuperarSenhaInput) {
   return request<RecuperarSenhaResponse>("/auth/recuperar-senha", {
     method: "POST",
     body: input,
   });
+}
 
 export type Categoria = {
   id: number;
@@ -127,5 +123,4 @@ export function cancelarSolicitacao(id: number) {
   return request<{ sucesso: boolean; mensagem: string }>(`/solicitacoes/${id}/cancelar`, {
     method: "PATCH",
   });
-}
 }
