@@ -75,6 +75,31 @@ async function register(req, res, next) {
   }
 }
 
+async function login(req, res, next) {
+  const email = req.body?.email?.trim().toLowerCase();
+  const password = req.body?.password;
+
+  if (!email || !password) {
+    return res.status(400).json({ erro: "E-mail e senha são obrigatórios." });
+  }
+
+  try {
+    const [rows] = await db.execute(
+      "SELECT id, nome, email, senha FROM usuarios WHERE email = ? LIMIT 1",
+      [email],
+    );
+    const user = rows[0];
+
+    if (!user || !(await bcrypt.compare(password, user.senha))) {
+      return res.status(401).json({ erro: "Senha inválida." });
+    }
+
+    return res.json({ id: user.id, nome: user.nome, email: user.email });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = { register };
 
 async function logout(req, res) {
@@ -85,6 +110,7 @@ async function logout(req, res) {
 
 module.exports = {
   register,
+  login,
   logout,
 };
 

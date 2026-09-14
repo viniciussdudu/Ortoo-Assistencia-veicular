@@ -5,6 +5,7 @@ const userController = require("../controllers/userController");
 const router = express.Router();
 
 router.post("/auth/cadastro", authController.register);
+router.post("/auth/login", authController.login);
 router.post("/auth/logout", authController.logout);
 router.post("/auth/recuperar-senha", authController.recuperarSenha);
 

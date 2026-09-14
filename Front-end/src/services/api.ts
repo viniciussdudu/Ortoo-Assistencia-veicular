@@ -66,6 +66,9 @@ export function register(input: RegisterInput) {
   return request<RegisteredUser>("/auth/cadastro", { method: "POST", body: input });
 }
 
+export function login(input: Pick<RegisterInput, "email" | "password">) {
+  return request<RegisteredUser>("/auth/login", { method: "POST", body: input });
+ 
 export type RecuperarSenhaInput = {
   email: string;
   novaSenha: string;
