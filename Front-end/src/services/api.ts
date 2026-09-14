@@ -58,11 +58,6 @@ function getApiUrl() {
   return apiUrl;
 }
 
-type RequestOptions = {
-  method?: "POST" | "GET" | "PUT" | "DELETE";
-  body?: unknown;
-};
-
 async function request<T>(
   path: string,
   options: RequestOptions = {},
