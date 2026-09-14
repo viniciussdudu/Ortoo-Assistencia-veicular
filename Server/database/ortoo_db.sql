@@ -1,9 +1,5 @@
 -- 1. Tabela de Usuários (Clientes, Autônomos e Empresas)
-<<<<<<< HEAD
-CREATE TABLE IF NOT EXISTS usuarios (
-=======
 CREATE TABLE usuarios (
->>>>>>> Ortoo-proj/develop
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
@@ -15,8 +11,6 @@ CREATE TABLE usuarios (
     foto_url VARCHAR(255) DEFAULT NULL, -- URL ou caminho da foto de perfil / logo da empresa
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-<<<<<<< HEAD
-=======
 
 -- 2. Categorias de Serviços Oferecidos no Ortoo
 CREATE TABLE categorias_servico (
@@ -65,4 +59,3 @@ CREATE TABLE solicitacoes (
     FOREIGN KEY (prestador_id) REFERENCES perfis_prestadores(id),
     FOREIGN KEY (categoria_id) REFERENCES categorias_servico(id)
 );
->>>>>>> Ortoo-proj/develop
