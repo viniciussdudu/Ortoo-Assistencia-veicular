@@ -53,10 +53,23 @@ async function register(req, res, next) {
 
   try {
     const senha = await bcrypt.hash(data.password, 12);
+
+    // Trata documento (apenas números) e define CPF ou CNPJ pelo tamanho
+    const cleanDoc = data.documento.replace(/\D/g, "");
+    const tipoDocumento = cleanDoc.length === 14 ? "CNPJ" : "CPF";
+
+    // SQL ajustado de acordo com a estrutura real da tabela 'usuarios'
     const [result] = await db.execute(
-      `INSERT INTO usuarios (nome, email, senha, telefone, documento, tipo_documento, tipo_usuario)
-       VALUES (?, ?, ?, '', ?, 'CPF', 'CLIENTE')`,
-      [data.nome, data.email, senha, data.documento],
+      `INSERT INTO usuarios (nome, email, documento, senha, telefone, tipo_documento, tipo_usuario)
+       VALUES (?, ?, ?, ?, ?, ?, 'CLIENTE')`,
+      [
+        data.nome,
+        data.email,
+        cleanDoc,
+        senha,
+        data.telefone || "",
+        tipoDocumento,
+      ]
     );
 
     return res.status(201).json({
@@ -86,7 +99,7 @@ async function login(req, res, next) {
   try {
     const [rows] = await db.execute(
       "SELECT id, nome, email, senha FROM usuarios WHERE email = ? LIMIT 1",
-      [email],
+      [email]
     );
     const user = rows[0];
 
@@ -100,19 +113,11 @@ async function login(req, res, next) {
   }
 }
 
-module.exports = { register };
-
 async function logout(req, res) {
   return res
     .status(200)
     .json({ sucesso: true, mensagem: "Sessão encerrada com sucesso." });
 }
-
-module.exports = {
-  register,
-  login,
-  logout,
-};
 
 async function recuperarSenha(req, res, next) {
   const email = req.body?.email?.trim().toLowerCase();
@@ -147,6 +152,7 @@ async function recuperarSenha(req, res, next) {
 
 module.exports = {
   register,
+  login,
   logout,
   recuperarSenha,
 };
