@@ -27,19 +27,19 @@ function validateRegistration(body) {
   const documento = body?.documento?.replace(/\D/g, "");
 
   if (!nome || !email || !password || !documento) {
-    return { error: "Nome, e-mail, CPF e senha são obrigatórios." };
+    return { error: "Nome, e-mail, CPF e senha sÃƒÂ£o obrigatÃƒÂ³rios." };
   }
 
   if (!EMAIL_PATTERN.test(email)) {
-    return { error: "Informe um e-mail válido." };
+    return { error: "Informe um e-mail vÃƒÂ¡lido." };
   }
 
   if (!/^\d{6}$/.test(password)) {
-    return { error: "A senha deve ter exatamente 6 dígitos numéricos." };
+    return { error: "A senha deve ter exatamente 6 dÃƒÂ­gitos numÃƒÂ©ricos." };
   }
 
   if (!isValidCpf(documento)) {
-    return { error: "Informe um CPF válido." };
+    return { error: "Informe um CPF vÃƒÂ¡lido." };
   }
 
   return { nome, email, password, documento };
@@ -54,7 +54,7 @@ async function register(req, res, next) {
   try {
     const senha = await bcrypt.hash(data.password, 12);
 
-    // Trata documento (apenas números) e define CPF ou CNPJ pelo tamanho
+    // Trata documento (apenas nÃƒÂºmeros) e define CPF ou CNPJ pelo tamanho
     const cleanDoc = data.documento.replace(/\D/g, "");
     const tipoDocumento = cleanDoc.length === 14 ? "CNPJ" : "CPF";
 
@@ -81,7 +81,7 @@ async function register(req, res, next) {
     if (error.code === "ER_DUP_ENTRY") {
       return res
         .status(409)
-        .json({ erro: "Já existe uma conta com este e-mail ou CPF." });
+        .json({ erro: "JÃƒÂ¡ existe uma conta com este e-mail ou CPF." });
     }
 
     return next(error);
@@ -93,7 +93,7 @@ async function login(req, res, next) {
   const password = req.body?.password;
 
   if (!email || !password) {
-    return res.status(400).json({ erro: "E-mail e senha são obrigatórios." });
+    return res.status(400).json({ erro: "E-mail e senha sÃƒÂ£o obrigatÃƒÂ³rios." });
   }
 
   try {
@@ -104,7 +104,7 @@ async function login(req, res, next) {
     const user = rows[0];
 
     if (!user || !(await bcrypt.compare(password, user.senha))) {
-      return res.status(401).json({ erro: "Senha inválida." });
+      return res.status(401).json({ erro: "Senha invÃƒÂ¡lida." });
     }
 
     return res.json({ id: user.id, nome: user.nome, email: user.email });
@@ -113,26 +113,28 @@ async function login(req, res, next) {
   }
 }
 
+
 async function logout(req, res) {
   return res
     .status(200)
-    .json({ sucesso: true, mensagem: "Sessão encerrada com sucesso." });
+    .json({ sucesso: true, mensagem: "SessÃƒÂ£o encerrada com sucesso." });
 }
+
 
 async function recuperarSenha(req, res, next) {
   const email = req.body?.email?.trim().toLowerCase();
   const novaSenha = req.body?.novaSenha;
 
   if (!email || !novaSenha) {
-    return res.status(400).json({ erro: "E-mail e nova senha são obrigatórios." });
+    return res.status(400).json({ erro: "E-mail e nova senha sÃƒÂ£o obrigatÃƒÂ³rios." });
   }
 
   if (!EMAIL_PATTERN.test(email)) {
-    return res.status(400).json({ erro: "Informe um e-mail válido." });
+    return res.status(400).json({ erro: "Informe um e-mail vÃƒÂ¡lido." });
   }
 
   if (!/^\d{6}$/.test(novaSenha)) {
-    return res.status(400).json({ erro: "A nova senha deve ter exatamente 6 dígitos numéricos." });
+    return res.status(400).json({ erro: "A nova senha deve ter exatamente 6 dÃƒÂ­gitos numÃƒÂ©ricos." });
   }
 
   try {
