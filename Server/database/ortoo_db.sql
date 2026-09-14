@@ -1,9 +1,5 @@
 -- 1. Tabela de Usuários (Clientes, Autônomos e Empresas)
-<<<<<<< HEAD
-CREATE TABLE IF NOT EXISTS usuarios (
-=======
 CREATE TABLE usuarios (
->>>>>>> Ortoo-proj/develop
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
@@ -12,14 +8,12 @@ CREATE TABLE usuarios (
     documento VARCHAR(18) NOT NULL UNIQUE, -- Guarda CPF ou cnpj
     tipo_documento ENUM('CPF', 'CNPJ') NOT NULL,
     tipo_usuario ENUM('CLIENTE', 'PRESTADOR_AUTONOMO', 'EMPRESA') NOT NULL DEFAULT 'CLIENTE',
-    foto_url VARCHAR(255) DEFAULT NULL, -- URL ou caminho da foto de perfil / logo da empresa
+    foto_url VARCHAR(255) DEFAULT NULL,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-<<<<<<< HEAD
-=======
 
 -- 2. Categorias de Serviços Oferecidos no Ortoo
-CREATE TABLE categorias_servico (
+CREATE TABLE IF NOT EXISTS categorias_servico (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(50) NOT NULL,
     descricao VARCHAR(255),
@@ -27,11 +21,11 @@ CREATE TABLE categorias_servico (
 );
 
 -- 3. Perfil Detalhado do Prestador/Empresa
-CREATE TABLE perfis_prestadores (
+CREATE TABLE IF NOT EXISTS perfis_prestadores (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT NOT NULL UNIQUE,
-    nome_fantasia VARCHAR(100), -- Razão Social ou Nome Comercial para Empresas
-    raio_atendimento_km INT DEFAULT 15, -- Raio em km que o prestador aceita chamados
+    nome_fantasia VARCHAR(100),
+    raio_atendimento_km INT DEFAULT 15,
     descricao_empresa TEXT,
     disponivel BOOLEAN DEFAULT TRUE,
     latitude_atual DECIMAL(10, 8),
@@ -40,7 +34,7 @@ CREATE TABLE perfis_prestadores (
 );
 
 -- 4. Serviços Oferecidos pelo Prestador/Empresa e Preços
-CREATE TABLE servicos_prestador (
+CREATE TABLE IF NOT EXISTS servicos_prestador (
     id INT AUTO_INCREMENT PRIMARY KEY,
     prestador_id INT NOT NULL,
     categoria_id INT NOT NULL,
@@ -50,7 +44,7 @@ CREATE TABLE servicos_prestador (
 );
 
 -- 5. Solicitações / Chamados do Ortoo
-CREATE TABLE solicitacoes (
+CREATE TABLE IF NOT EXISTS solicitacoes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id INT NOT NULL,
     prestador_id INT,
@@ -65,4 +59,3 @@ CREATE TABLE solicitacoes (
     FOREIGN KEY (prestador_id) REFERENCES perfis_prestadores(id),
     FOREIGN KEY (categoria_id) REFERENCES categorias_servico(id)
 );
->>>>>>> Ortoo-proj/develop

@@ -46,22 +46,14 @@ export class ApiError extends Error {
   }
 }
 
-const apiUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
+// FALLBACK: Garante a URL local caso a variável de ambiente não esteja definida
+const apiUrl = (process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
 
 function getApiUrl() {
-  if (!apiUrl) {
-    throw new ApiError(
-      "A API não foi configurada. Crie um arquivo .env a partir de .env.example.",
-    );
-  }
-
   return apiUrl;
 }
 
-async function request<T>(
-  path: string,
-  options: RequestOptions = {},
-): Promise<T> {
+
   let response: Response;
 
   try {
@@ -105,4 +97,68 @@ export function getUserProfile() {
 export function logout() {
   // Nota: Altere "/auth/logout" se o seu backend usar outro caminho
   return request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
+}
+
+export function login(input: Pick<RegisterInput, "email" | "password">) {
+  return request<RegisteredUser>("/auth/login", { method: "POST", body: input });
+}
+
+export type RecuperarSenhaInput = {
+  email: string;
+  novaSenha: string;
+};
+
+export type RecuperarSenhaResponse = {
+  sucesso: boolean;
+  mensagem: string;
+};
+
+export function recuperarSenha(input: RecuperarSenhaInput) {
+  return request<RecuperarSenhaResponse>("/auth/recuperar-senha", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export type Categoria = {
+  id: number;
+  nome: string;
+  descricao: string | null;
+  icone_url: string | null;
+};
+
+export type Solicitacao = {
+  id: number;
+  status: "PENDENTE" | "ACEITO" | "EM_ANDAMENTO" | "CONCLUIDO" | "CANCELADO";
+  descricao_problema: string | null;
+  latitude_origem: string;
+  longitude_origem: string;
+  criado_em: string;
+  categoria_nome: string;
+};
+
+export type CriarSolicitacaoInput = {
+  cliente_id: number;
+  categoria_id: number;
+  descricao_problema?: string;
+  latitude_origem: number;
+  longitude_origem: number;
+};
+
+export function listarCategorias() {
+  return request<Categoria[]>("/categorias");
+}
+
+export function criarSolicitacao(input: CriarSolicitacaoInput) {
+  return request<Solicitacao>("/solicitacoes", { method: "POST", body: input });
+}
+
+export function listarMinhasSolicitacoes(clienteId: number) {
+  return request<Solicitacao[]>(`/solicitacoes?cliente_id=${clienteId}`);
+}
+
+export function cancelarSolicitacao(id: number) {
+  return request<{ sucesso: boolean; mensagem: string }>(`/solicitacoes/${id}/cancelar`, {
+    method: "PATCH",
+  });
 }
