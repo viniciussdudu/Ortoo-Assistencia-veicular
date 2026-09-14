@@ -68,4 +68,21 @@ export function register(input: RegisterInput) {
 
 export function login(input: Pick<RegisterInput, "email" | "password">) {
   return request<RegisteredUser>("/auth/login", { method: "POST", body: input });
+ 
+export type RecuperarSenhaInput = {
+  email: string;
+  novaSenha: string;
+};
+
+export type RecuperarSenhaResponse = {
+  sucesso: boolean;
+  mensagem: string;
+};
+
+// Adicione junto com export function register(...)
+export function recuperarSenha(input: RecuperarSenhaInput) {
+  return request<RecuperarSenhaResponse>("/auth/recuperar-senha", {
+    method: "POST",
+    body: input,
+  });
 }

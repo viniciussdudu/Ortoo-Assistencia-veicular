@@ -113,3 +113,40 @@ module.exports = {
   login,
   logout,
 };
+
+async function recuperarSenha(req, res, next) {
+  const email = req.body?.email?.trim().toLowerCase();
+  const novaSenha = req.body?.novaSenha;
+
+  if (!email || !novaSenha) {
+    return res.status(400).json({ erro: "E-mail e nova senha são obrigatórios." });
+  }
+
+  if (!EMAIL_PATTERN.test(email)) {
+    return res.status(400).json({ erro: "Informe um e-mail válido." });
+  }
+
+  if (!/^\d{6}$/.test(novaSenha)) {
+    return res.status(400).json({ erro: "A nova senha deve ter exatamente 6 dígitos numéricos." });
+  }
+
+  try {
+    const [rows] = await db.execute("SELECT id FROM usuarios WHERE email = ?", [email]);
+    if (rows.length === 0) {
+      return res.status(404).json({ erro: "Nenhuma conta cadastrada com este e-mail." });
+    }
+
+    const senhaHash = await bcrypt.hash(novaSenha, 12);
+    await db.execute("UPDATE usuarios SET senha = ? WHERE email = ?", [senhaHash, email]);
+
+    return res.status(200).json({ sucesso: true, mensagem: "Senha redefinida com sucesso." });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = {
+  register,
+  logout,
+  recuperarSenha,
+};
