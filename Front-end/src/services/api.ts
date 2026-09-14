@@ -34,7 +34,7 @@ function getApiUrl() {
 }
 
 type RequestOptions = {
-  method?: "POST";
+  method?: "POST" | "PATCH";
   body?: unknown;
 };
 
@@ -82,4 +82,47 @@ export function recuperarSenha(input: RecuperarSenhaInput) {
     method: "POST",
     body: input,
   });
+
+export type Categoria = {
+  id: number;
+  nome: string;
+  descricao: string | null;
+  icone_url: string | null;
+};
+
+export type Solicitacao = {
+  id: number;
+  status: "PENDENTE" | "ACEITO" | "EM_ANDAMENTO" | "CONCLUIDO" | "CANCELADO";
+  descricao_problema: string | null;
+  latitude_origem: string;
+  longitude_origem: string;
+  criado_em: string;
+  categoria_nome: string;
+};
+
+export type CriarSolicitacaoInput = {
+  cliente_id: number;
+  categoria_id: number;
+  descricao_problema?: string;
+  latitude_origem: number;
+  longitude_origem: number;
+};
+
+export function listarCategorias() {
+  return request<Categoria[]>("/categorias");
+}
+
+export function criarSolicitacao(input: CriarSolicitacaoInput) {
+  return request<Solicitacao>("/solicitacoes", { method: "POST", body: input });
+}
+
+export function listarMinhasSolicitacoes(clienteId: number) {
+  return request<Solicitacao[]>(`/solicitacoes?cliente_id=${clienteId}`);
+}
+
+export function cancelarSolicitacao(id: number) {
+  return request<{ sucesso: boolean; mensagem: string }>(`/solicitacoes/${id}/cancelar`, {
+    method: "PATCH",
+  });
+}
 }
