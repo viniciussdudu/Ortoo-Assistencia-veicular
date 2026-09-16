@@ -22,7 +22,9 @@ export class ApiError extends Error {
 }
 
 // FALLBACK: Garante a URL local caso a variável de ambiente não esteja definida
-const apiUrl = (process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
+const apiUrl = (
+  process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api"
+).replace(/\/$/, "");
 
 function getApiUrl() {
   return apiUrl;
@@ -33,7 +35,10 @@ type RequestOptions = {
   body?: unknown;
 };
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
   let response: Response;
 
   try {
@@ -42,7 +47,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       headers: {
         "Content-Type": "application/json",
       },
-      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+      ...(options.body === undefined
+        ? {}
+        : { body: JSON.stringify(options.body) }),
     });
   } catch {
     throw new ApiError("Não foi possível conectar à API.");
@@ -51,18 +58,27 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new ApiError(payload?.erro ?? "A API retornou um erro.", response.status);
+    throw new ApiError(
+      payload?.erro ?? "A API retornou um erro.",
+      response.status,
+    );
   }
 
   return payload as T;
 }
 
 export function register(input: RegisterInput) {
-  return request<RegisteredUser>("/auth/cadastro", { method: "POST", body: input });
+  return request<RegisteredUser>("/auth/cadastro", {
+    method: "POST",
+    body: input,
+  });
 }
 
 export function login(input: Pick<RegisterInput, "email" | "password">) {
-  return request<RegisteredUser>("/auth/login", { method: "POST", body: input });
+  return request<RegisteredUser>("/auth/login", {
+    method: "POST",
+    body: input,
+  });
 }
 
 export type RecuperarSenhaInput = {
@@ -120,7 +136,18 @@ export function listarMinhasSolicitacoes(clienteId: number) {
 }
 
 export function cancelarSolicitacao(id: number) {
-  return request<{ sucesso: boolean; mensagem: string }>(`/solicitacoes/${id}/cancelar`, {
-    method: "PATCH",
-  });
+  return request<{ sucesso: boolean; mensagem: string }>(
+    `/solicitacoes/${id}/cancelar`,
+    {
+      method: "PATCH",
+    },
+  );
+}
+
+export function getUserProfile() {
+  return request<UserProfile>("/usuario/perfil");
+}
+
+export function logout() {
+  return request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
 }
