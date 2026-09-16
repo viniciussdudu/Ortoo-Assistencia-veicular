@@ -27,6 +27,12 @@ const apiUrl = (
 ).replace(/\/$/, "");
 
 function getApiUrl() {
+  if (!apiUrl) {
+    throw new ApiError(
+      "A API nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o foi configurada. Crie um arquivo .env a partir de .env.example.",
+    );
+  }
+
   return apiUrl;
 }
 
@@ -52,7 +58,7 @@ async function request<T>(
         : { body: JSON.stringify(options.body) }),
     });
   } catch {
-    throw new ApiError("Não foi possível conectar à API.");
+    throw new ApiError("NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o foi possÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel conectar ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  API.");
   }
 
   const payload = await response.json().catch(() => null);
@@ -80,7 +86,7 @@ export function login(input: Pick<RegisterInput, "email" | "password">) {
     body: input,
   });
 }
-
+ 
 export type RecuperarSenhaInput = {
   email: string;
   novaSenha: string;
@@ -91,6 +97,7 @@ export type RecuperarSenhaResponse = {
   mensagem: string;
 };
 
+// Adicione junto com export function register(...)
 export function recuperarSenha(input: RecuperarSenhaInput) {
   return request<RecuperarSenhaResponse>("/auth/recuperar-senha", {
     method: "POST",
