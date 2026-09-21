@@ -1,3 +1,11 @@
+# Projeto de Sistemas - 2026.2 | Universidade Federal do Tocantins - Palmas
+
+### Curso: Bacharelado em Ciência da Computação
+
+### Professor: Edeilson Milhomem da Silva
+
+### Time: Vinicius Eduardo De Sousa Silveira, Arthur Pereira Bispo, Klaus Henrique Otaviano Souza, Daniel Vinicius Da Silva, Samara Coelho da Silva, Thiago Soares Ribeiro Nunes De Carvalho
+
 #  ÖRTÖÖ — Assistência Veicular Sob Demanda
 
 > **Mobilidade, segurança e resposta rápida na palma da sua mão.**
@@ -58,3 +66,9 @@ Nossa plataforma atende de forma integrada às duas pontas do ecossistema:
 | **Samara Coelho** | [@SamaraCdS-UFT](https://github.com/SamaraCdS-UFT) |
 
 ---
+
+## Sprints
+
+[sprint 1](docs/Sprints/sprint%201_%20criação%20de%20contas%20e%20etc.pdf) : [Release]()
+
+[sprint 2](docs/Sprints/Sprint_2_Planejamento.md) : [Release]()
