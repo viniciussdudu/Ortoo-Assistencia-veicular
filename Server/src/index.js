@@ -64,11 +64,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor Ortoo rodando em http://localhost:${PORT}`);
 });
-
-router.post("/auth/cadastro", authController.register);
-router.post("/auth/logout", authController.logout);
-
-// Rotas de Usuário / Perfil
-router.get("/usuario/perfil", userController.getProfile);
-
-module.exports = router;

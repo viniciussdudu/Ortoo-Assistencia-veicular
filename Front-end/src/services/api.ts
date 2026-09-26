@@ -58,7 +58,7 @@ async function request<T>(
         : { body: JSON.stringify(options.body) }),
     });
   } catch {
-    throw new ApiError("NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o foi possÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel conectar ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  API.");
+    throw new ApiError("Não foi possível conectar na API.");
   }
 
   const payload = await response.json().catch(() => null);
@@ -121,6 +121,27 @@ export type Solicitacao = {
   criado_em: string;
   categoria_nome: string;
 };
+
+export type ServicoOferecido = {
+  id: number;
+  categoria_id: number;
+  categoria_nome: string;
+  preco_base: string;
+};
+
+export type Prestador = {
+  id: number;
+  nome: string;
+  foto_url: string | null;
+  descricao_empresa: string | null;
+  disponivel: boolean;
+  raio_atendimento_km: number;
+  servicos: ServicoOferecido[];
+};
+
+export function listarPrestadores() {
+  return request<Prestador[]>("/prestadores");
+}
 
 export type CriarSolicitacaoInput = {
   cliente_id: number;

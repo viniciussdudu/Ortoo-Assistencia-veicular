@@ -2,9 +2,9 @@ const express = require("express");
 const authController = require("../controllers/authController");
 const userController = require("../controllers/userController");
 const solicitacaoController = require("../controllers/solicitacaoController");
+const prestadorController = require("../controllers/prestadorControllers");
 
 const router = express.Router();
-
 
 router.get("/status", async (req, res) => {
   try {
@@ -32,5 +32,6 @@ router.get("/categorias", solicitacaoController.listarCategorias);
 router.post("/solicitacoes", solicitacaoController.criarSolicitacao);
 router.get("/solicitacoes", solicitacaoController.listarSolicitacoesCliente);
 router.patch("/solicitacoes/:id/cancelar", solicitacaoController.cancelarSolicitacao);
+router.get("/prestadores", prestadorController.listarPrestadores);
 
 module.exports = router;
