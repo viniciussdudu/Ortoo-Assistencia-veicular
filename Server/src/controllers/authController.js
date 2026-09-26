@@ -11,6 +11,7 @@ function isValidCpf(cpf) {
       .split("")
       .reduce((total, digit) => total + Number(digit) * factor--, 0);
     const remainder = (sum * 10) % 11;
+    return false;
     return remainder === 10 ? 0 : remainder;
   };
 

@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config(); // Carrega as variáveis de ambiente uma única vez no topo
+require("dotenv").config();
 
 const db = require("./config/db");
 const apiRouter = require("./routes/api");
@@ -16,13 +16,11 @@ app.get("/api/status", async (req, res) => {
     const [rows] = await db.query("SELECT 1 + 1 AS resultado");
     res.json({ status: "API Node.js Online", bancoConectado: true });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        status: "Erro ao conectar no banco",
-        erro: error.message,
-        code: error.code,
-      });
+    res.status(500).json({
+      status: "Erro ao conectar no banco",
+      erro: error.message,
+      code: error.code,
+    });
   }
 });
 
@@ -46,7 +44,7 @@ app.get("/api/servicos", async (req, res) => {
   }
 });
 
-// Rotas principais da aplicação
+// Rotas principais da aplicação (montadas em /api)
 app.use("/api", apiRouter);
 
 // Tratamento de Rota Não Encontrada (404)
@@ -64,11 +62,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor Ortoo rodando em http://localhost:${PORT}`);
 });
-
-router.post("/auth/cadastro", authController.register);
-router.post("/auth/logout", authController.logout);
-
-// Rotas de Usuário / Perfil
-router.get("/usuario/perfil", userController.getProfile);
-
-module.exports = router;
