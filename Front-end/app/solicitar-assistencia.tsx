@@ -2,10 +2,20 @@ import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import {
-  ApiError, Categoria, criarSolicitacao, listarCategorias,
+  ApiError,
+  Categoria,
+  criarSolicitacao,
+  listarCategorias,
 } from "../src/services/api";
 
 // TODO: substituir pelo id do usuario logado quando houver sessao real.
@@ -30,7 +40,7 @@ export default function SolicitarAssistencia() {
 
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        setErroLocalizacao("Permissao de localizacao negada. Habilite nas configuracoes para continuar.");
+        setErroLocalizacao("Permissão de localização negada. Habilite nas configurações para continuar.");
       } else {
         try {
           const posicao = await Location.getCurrentPositionAsync({
@@ -41,7 +51,7 @@ export default function SolicitarAssistencia() {
             longitude: posicao.coords.longitude,
           });
         } catch {
-          setErroLocalizacao("Nao foi possivel obter sua localizacao.");
+          setErroLocalizacao("Não foi possível obter sua localização.");
         }
       }
 
@@ -53,11 +63,11 @@ export default function SolicitarAssistencia() {
 
   async function enviar() {
     if (!categoriaId) {
-      Alert.alert("Atencao", "Escolha o tipo de problema.");
+      Alert.alert("Atenção", "Escolha o tipo de problema.");
       return;
     }
     if (!coords) {
-      Alert.alert("Atencao", "Precisamos da sua localizacao para acionar um prestador.");
+      Alert.alert("Atenção", "Precisamos da sua localização para acionar um prestador.");
       return;
     }
 
@@ -70,11 +80,14 @@ export default function SolicitarAssistencia() {
         latitude_origem: coords.latitude,
         longitude_origem: coords.longitude,
       });
-      Alert.alert("Pronto", "Sua solicitacao foi enviada. Procurando prestadores proximos.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+
+      // Redireciona diretamente para o mapa com a categoria selecionada
+      router.push({
+        pathname: "/mapa",
+        params: { categoria_id: categoriaId },
+      });
     } catch (erro) {
-      Alert.alert("Erro", erro instanceof ApiError ? erro.message : "Falha ao enviar a solicitacao.");
+      Alert.alert("Erro", erro instanceof ApiError ? erro.message : "Falha ao enviar a solicitação.");
     } finally {
       setEnviando(false);
     }
@@ -90,9 +103,9 @@ export default function SolicitarAssistencia() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.titulo}>Solicitar assistencia</Text>
+      <Text style={styles.titulo}>Solicitar assistência</Text>
 
-      <Text style={styles.rotulo}>Qual e o problema?</Text>
+      <Text style={styles.rotulo}>Qual é o problema?</Text>
       <View style={styles.grade}>
         {categorias.map((categoria) => (
           <Pressable
@@ -114,13 +127,13 @@ export default function SolicitarAssistencia() {
         numberOfLines={4}
         value={descricao}
         onChangeText={setDescricao}
-        placeholder="Ex.: carro nao liga, luz da bateria acesa"
+        placeholder="Ex.: carro não liga, luz da bateria acesa"
       />
 
       <View style={styles.local}>
         {coords ? (
           <Text style={styles.localTexto}>
-            Localizacao capturada: {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
+            Localização capturada: {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
           </Text>
         ) : (
           <Text style={styles.localErro}>{erroLocalizacao}</Text>
@@ -145,22 +158,32 @@ const styles = StyleSheet.create({
   rotulo: { fontSize: 15, fontWeight: "600", color: "#1F3140", marginTop: 8 },
   grade: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
-    paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20,
-    borderWidth: 1, borderColor: "#1F3140",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#1F3140",
   },
   chipAtivo: { backgroundColor: "#C85A34", borderColor: "#C85A34" },
   chipTexto: { color: "#1F3140", fontWeight: "500" },
   chipTextoAtivo: { color: "#F3EBDA" },
   campo: {
-    borderWidth: 1, borderColor: "#CCC", borderRadius: 8,
-    padding: 12, minHeight: 96, textAlignVertical: "top",
+    borderWidth: 1,
+    borderColor: "#CCC",
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 96,
+    textAlignVertical: "top",
   },
   local: { padding: 12, backgroundColor: "#F3EBDA", borderRadius: 8 },
   localTexto: { color: "#1F3140", fontSize: 13 },
   localErro: { color: "#B00020", fontSize: 13 },
   botao: {
-    backgroundColor: "#C85A34", paddingVertical: 16,
-    borderRadius: 10, alignItems: "center", marginTop: 8,
+    backgroundColor: "#C85A34",
+    paddingVertical: 16,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 8,
   },
   botaoDesabilitado: { opacity: 0.5 },
   botaoTexto: { color: "#F3EBDA", fontWeight: "700", fontSize: 16 },
