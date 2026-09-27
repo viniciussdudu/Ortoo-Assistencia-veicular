@@ -1,7 +1,10 @@
+export type UserType = "CLIENTE" | "PRESTADOR_AUTONOMO" | "EMPRESA";
+
 export type RegisteredUser = {
   id: number;
   nome: string;
   email: string;
+  tipo_usuario: UserType;
 };
 
 export type RegisterInput = {
@@ -9,6 +12,25 @@ export type RegisterInput = {
   email: string;
   password: string;
   documento: string;
+  telefone?: string;
+  tipo_usuario: UserType;
+  nome_fantasia?: string;
+  descricao_empresa?: string;
+  raio_atendimento_km?: number;
+  latitude_atual?: number;
+  longitude_atual?: number;
+};
+
+export type UserProfile = {
+  id: number;
+  nome: string;
+  email: string;
+  telefone: string;
+  documento: string;
+  tipo_documento: "CPF" | "CNPJ";
+  tipo_usuario: UserType;
+  foto_url: string | null;
+  criado_em: string;
 };
 
 export class ApiError extends Error {
@@ -29,7 +51,7 @@ const apiUrl = (
 function getApiUrl() {
   if (!apiUrl) {
     throw new ApiError(
-      "A API nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o foi configurada. Crie um arquivo .env a partir de .env.example.",
+      "A API não foi configurada. Crie um arquivo .env a partir de .env.example.",
     );
   }
 
@@ -54,11 +76,11 @@ async function request<T>(
         "Content-Type": "application/json",
       },
       ...(options.body === undefined
-        ? {}
-        : { body: JSON.stringify(options.body) }),
+      ? {}
+      : { body: JSON.stringify(options.body) }),
     });
   } catch {
-    throw new ApiError("NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o foi possÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel conectar ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  API.");
+    throw new ApiError("Não foi possível conectar à API.");
   }
 
   const payload = await response.json().catch(() => null);
@@ -86,7 +108,7 @@ export function login(input: Pick<RegisterInput, "email" | "password">) {
     body: input,
   });
 }
- 
+
 export type RecuperarSenhaInput = {
   email: string;
   novaSenha: string;
@@ -97,7 +119,6 @@ export type RecuperarSenhaResponse = {
   mensagem: string;
 };
 
-// Adicione junto com export function register(...)
 export function recuperarSenha(input: RecuperarSenhaInput) {
   return request<RecuperarSenhaResponse>("/auth/recuperar-senha", {
     method: "POST",
