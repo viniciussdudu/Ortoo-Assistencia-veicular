@@ -4,10 +4,10 @@ const db = require("../config/db"); // <--- Adicionado para funcionar na rota de
 const authController = require("../controllers/authController");
 const userController = require("../controllers/userController");
 const solicitacaoController = require("../controllers/solicitacaoController");
+const prestadorController = require("../controllers/prestadorControllers");
 
 const router = express.Router();
 
-// Rota de Status da API
 router.get("/status", async (req, res) => {
   try {
     await db.execute("SELECT 1");
@@ -35,6 +35,7 @@ router.get("/categorias", solicitacaoController.listarCategorias);
 router.post("/solicitacoes", solicitacaoController.criarSolicitacao);
 router.get("/solicitacoes", solicitacaoController.listarSolicitacoesCliente);
 router.patch("/solicitacoes/:id/cancelar", solicitacaoController.cancelarSolicitacao);
+router.get("/prestadores", prestadorController.listarPrestadores);
 
 // Rota para listar prestadores por categoria de serviço
 router.get("/prestadores/categoria/:categoria_id", async (req, res) => {
