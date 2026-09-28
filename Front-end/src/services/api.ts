@@ -33,6 +33,10 @@ export type UserProfile = {
   criado_em: string;
 };
 
+export type UserProfile = {
+  id: number;
+};
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -79,8 +83,10 @@ async function request<T>(
       ? {}
       : { body: JSON.stringify(options.body) }),
     });
-  } catch {
-    throw new ApiError("Não foi possível conectar na API.");
+  } catch (erro){
+    console.log("URL chamada:", `${getApiUrl()}${path}`);
+    console.log("Erro original:", erro);
+    throw new ApiError("Não foi possível conectar a API.");
   }
 
   const payload = await response.json().catch(() => null);

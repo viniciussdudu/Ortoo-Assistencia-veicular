@@ -4,10 +4,11 @@ const db = require("../config/db"); // <--- Adicionado para funcionar na rota de
 const authController = require("../controllers/authController");
 const userController = require("../controllers/userController");
 const solicitacaoController = require("../controllers/solicitacaoController");
-const prestadorController = require("../controllers/prestadorControllers");
+const paymentController = require("../controllers/paymentController");
 
 const router = express.Router();
 
+// Rota de Status da API
 router.get("/status", async (req, res) => {
   try {
     await db.execute("SELECT 1");
@@ -84,5 +85,60 @@ router.post("/solicitacoes/cancelar", async (req, res) => {
     return res.status(500).json({ erro: "Erro ao cancelar solicitação." });
   }
 });
+
+// Rota para listar prestadores por categoria de serviço
+router.get("/prestadores/categoria/:categoria_id", async (req, res) => {
+  const { categoria_id } = req.params;
+
+  try {
+    const query = `
+      SELECT 
+        p.id AS prestador_id,
+        u.nome,
+        u.telefone,
+        p.nome_fantasia,
+        p.latitude_atual,
+        p.longitude_atual,
+        sp.preco_base
+      FROM servicos_prestador sp
+      INNER JOIN perfis_prestadores p ON sp.prestador_id = p.id
+      INNER JOIN usuarios u ON p.usuario_id = u.id
+      WHERE sp.categoria_id = ? 
+        AND p.disponivel = TRUE;
+    `;
+
+    const [prestadores] = await db.query(query, [categoria_id]);
+    return res.json(prestadores);
+  } catch (error) {
+    console.error("Erro ao buscar prestadores:", error);
+    return res.status(500).json({ erro: "Erro interno ao buscar prestadores." });
+  }
+});
+
+// Rota para cancelar solicitações pendentes do cliente
+router.post("/solicitacoes/cancelar", async (req, res) => {
+  const { cliente_id } = req.body;
+
+  try {
+    const query = `
+      UPDATE solicitacoes 
+      SET status = 'CANCELADO' 
+      WHERE cliente_id = ? AND status IN ('PENDENTE', 'EM_ANDAMENTO');
+    `;
+    await db.query(query, [cliente_id]);
+    
+    return res.json({ mensagem: "Solicitação cancelada com sucesso." });
+  } catch (error) {
+    console.error("Erro ao cancelar solicitação:", error);
+    return res.status(500).json({ erro: "Erro ao cancelar solicitação." });
+  }
+});
+
+// Rota para pagamento e administrar cartões
+router.post("/pagamento/novo-cartão", paymentController.criarSetupIntent);
+router.post("/pagamento/salvar-cartão", paymentController.salvarCartao);
+router.get("/pagamento/:usuario_id/cartoes", paymentController.listarCartoes);
+router.post("/pagamento/solicitar-transacao", paymentController.criarTransacao);
+router.post("/pagamento/cobrar", paymentController.cobrarCartao);
 
 module.exports = router;

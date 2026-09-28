@@ -1,9 +1,10 @@
 import * as Location from "expo-location";
-import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MapaTempoReal from "../components/(componentes-mapas)/MapaTempoReal";
+import { ShowAlert } from "@/components/alert";
 
 interface Prestador {
   prestador_id: number;
@@ -24,8 +26,19 @@ interface Prestador {
   preco_base: number;
 }
 
+interface Cartao {
+  id: number;
+  bandeira: string | null;
+  ultimos_digitos: string;
+  validade_mes: number | null;
+  validade_ano: number | null;
+  apelido: string | null;
+  principal: boolean | number;
+}
+
 // TODO: substituir pelo ID do usuário logado na sessão real
 const CLIENTE_ID = 1;
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api"; // coloquei como global para todos acessarem
 
 export default function TelaMapa() {
   const router = useRouter();
@@ -40,6 +53,7 @@ export default function TelaMapa() {
 
   const [erroGps, setErroGps] = useState<string | null>(null);
 
+  const [solicitacaoId, setSolicitacaoId] = useState<number | null>(null);
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
   const [carregandoPrestadores, setCarregandoPrestadores] = useState(true);
   const [prestadorSelecionado, setPrestadorSelecionado] = useState<Prestador | null>(null);
@@ -147,6 +161,89 @@ export default function TelaMapa() {
     };
   }, [prestadorSelecionado?.latitude_atual, prestadorSelecionado?.longitude_atual]);
 
+  // Configurando a tela de pagamentos
+  const [cartoes, setCartoes] = useState<Cartao[]>([]);
+  const [carregandoCartoes, setCarregandoCartoes] = useState(false);
+  const [mostrarPagamentos, setMostrarPagamentos] = useState(false);
+  const [barraPagamento] = useState(() => new Animated.Value(260));
+  const [processandoPagamento, setProcessandoPagamento] = useState(false);
+
+  useEffect(() => {
+    Animated.spring(barraPagamento, {
+      toValue: mostrarPagamentos ? 0 : 260,
+      damping: 18,
+      stiffness: 160,
+      mass: 0.8,
+      useNativeDriver: true,
+    }).start();
+  }, [barraPagamento, mostrarPagamentos]);
+
+  // Lógica para listar todos os cartões do usuário
+  useEffect(() => {
+    async function buscarCartoes() {
+      try {
+        setCarregandoCartoes(true);
+        const response = await fetch(`${API_URL}/pagamento/${CLIENTE_ID}/cartoes`);
+        const data = await response.json(); 
+
+        if (!response.ok) {
+          throw new Error(data.erro || "Falha ao buscar cartões salvos.");
+        }
+
+        setCartoes(data);
+      } catch (error) {
+        console.error("Erro ao buscar cartões:", error);
+      } finally {
+        setCarregandoCartoes(false);
+      }
+    }
+
+    buscarCartoes();
+  }, []);
+
+  async function realizarPagamento(solicitacaoId: number) {
+    const response = await fetch(`${API_URL}/pagamento/cobrar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transacao_id: solicitacaoId }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.erro || "Não foi possível realizar o pagamento.");
+    }
+  }
+
+  async function processarPagamento() {
+    if (!solicitacaoId) {
+      ShowAlert("Erro", "Crie uma solicitação antes de pagar.");
+      return;
+    }
+
+    setProcessandoPagamento(true);
+
+    try {
+      const response = await fetch(`${API_URL}/pagamento/transacoes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solicitacao_id: solicitacaoId }),
+      });
+      const transacao = await response.json();
+
+      if (!response.ok) {
+        throw new Error(transacao.erro || "Não foi possível criar a transação.");
+      }
+
+      await realizarPagamento(transacao.id);
+      setMostrarPagamentos(false);
+      Alert.alert("Sucesso", "Pagamento realizado com sucesso!");
+    } catch (error) {
+      Alert.alert("Erro no pagamento", error instanceof Error ? error.message : "Tente novamente.");
+    } finally {
+      setProcessandoPagamento(false);
+    }
+  }
+
   if (!clienteCoords && !erroGps) {
     return (
       <View style={styles.carregandoContainer}>
@@ -199,29 +296,98 @@ export default function TelaMapa() {
                 const isSelected = prestadorSelecionado?.prestador_id === item.prestador_id;
 
                 return (
-                  <TouchableOpacity
+                  <View
                     key={item.prestador_id}
-                    activeOpacity={0.8}
-                    onPress={() => setPrestadorSelecionado(item)}
                     style={[
                       styles.cardMecanico,
                       isSelected && styles.cardSelecionado,
                     ]}
                   >
-                    <Text style={styles.nomeMecanico}>{item.nome_fantasia || item.nome}</Text>
-                    <Text style={styles.infoMecanico}>
-                      R$ {Number(item.preco_base).toFixed(2)}
-                    </Text>
-                    <TouchableOpacity style={styles.botaoChamar}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setPrestadorSelecionado(item)}
+                    >
+                      <Text style={styles.nomeMecanico}>{item.nome_fantasia || item.nome}</Text>
+                      <Text style={styles.infoMecanico}>
+                        R$ {Number(item.preco_base).toFixed(2)}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.botaoChamar}
+                      onPress={() => setPrestadorSelecionado(item)}
+                      disabled={processandoPagamento}
+                    >
                       <Text style={styles.textoBotao}>Chamar</Text>
                     </TouchableOpacity>
-                  </TouchableOpacity>
+                  </View>
                 );
               })}
             </ScrollView>
           )}
         </View>
       </SafeAreaView>
+
+      {mostrarPagamentos && (
+        <Animated.View
+          style={[styles.barraPagamento, { transform: [{ translateY: barraPagamento }] }]}
+        >
+          <View style={styles.cabecalhoPagamento}>
+            <Text style={styles.tituloPagamento}>Escolha a forma de pagamento</Text>
+            <TouchableOpacity
+              accessibilityLabel="Fechar formas de pagamento"
+              onPress={() => setMostrarPagamentos(false)}
+              style={styles.botaoFechar}
+            >
+              <Text style={styles.textoFechar}>X</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.opcoesPagamento}>
+            <TouchableOpacity
+              style={styles.opcaoPagamento}
+              onPress={processarPagamento}
+              disabled={processandoPagamento}
+            >
+              {processandoPagamento ? (
+                <ActivityIndicator size="small" color="#38bdf8" />
+              ) : (
+                <>
+                  <Text style={styles.iconePagamento}>PIX</Text>
+                  <Text style={styles.textoOpcaoPagamento}>Pix</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {carregandoCartoes ? (
+              <View style={styles.opcaoPagamento}>
+                <ActivityIndicator size="small" color="#38bdf8" />
+                <Text style={styles.textoOpcaoPagamento}>Cartões</Text>
+              </View>
+            ) : (
+              cartoes.map((cartao) => (
+                <TouchableOpacity
+                  key={cartao.id}
+                  style={styles.opcaoPagamento}
+                  onPress={processarPagamento}
+                  disabled={processandoPagamento}
+                >
+                  <Text style={styles.textoOpcaoPagamento}>
+                    {cartao.apelido || `•••• ${cartao.ultimos_digitos}`}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+
+            <TouchableOpacity
+              style={styles.opcaoPagamento}
+              onPress={processarPagamento}
+              disabled={processandoPagamento}
+            >
+              <Text style={styles.iconePagamento}>R$</Text>
+              <Text style={styles.textoOpcaoPagamento}>Dinheiro</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -281,4 +447,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   textoBotao: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  barraPagamento: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#111827",
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 28,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  cabecalhoPagamento: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  tituloPagamento: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  botaoFechar: { padding: 4 },
+  textoFechar: { color: "#9ca3af", fontSize: 16, fontWeight: "700" },
+  opcoesPagamento: { flexDirection: "row", gap: 10 },
+  opcaoPagamento: {
+    flex: 1,
+    minHeight: 76,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1f2937",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#374151",
+  },
+  iconePagamento: { color: "#38bdf8", fontSize: 14, fontWeight: "800", marginBottom: 6 },
+  textoOpcaoPagamento: { color: "#fff", fontSize: 13, fontWeight: "600" },
 });

@@ -27,10 +27,10 @@ app.get("/api/status", async (req, res) => {
 // Rota de Exemplo: Listar Usuários
 app.get("/api/usuarios", async (req, res) => {
   try {
-    const [usuarios] = await db.query("SELECT nome FROM usuarios");
+    const [usuarios] = await db.query("SELECT id, nome FROM usuarios");
     res.json(usuarios);
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao buscar usuários" });
+    res.status(500).json({ erro: 'Erro ao buscar usuários', detalhe: error.message, code: error.code });
   }
 });
 

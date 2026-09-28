@@ -44,6 +44,13 @@
         {
           "locationAlwaysAndWhenInUsePermission": "O Ortoo usa sua localizacao para encontrar prestadores proximos."
         }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.ortoo.app",
+          "enableGooglePay": false
+        }
       ]
     ],
     "experiments": {

@@ -1,4 +1,5 @@
 import { Stack, useRouter } from "expo-router";
+import { CardField } from "@stripe/stripe-react-native";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -275,83 +276,57 @@ export default function Cadastro() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  scrollContent: {
-    flexGrow: 1,
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
     paddingVertical: 32,
   },
-  formCard: { width: "100%", maxWidth: 440 },
-    title: { fontSize: 28, fontWeight: "bold", textAlign: "center", marginBottom: 6 },
-    subtitle: { fontSize: 14, color: "#666", textAlign: "center", marginBottom: 20 },
-    errorText: {
-      color: "#dc2626",
-      backgroundColor: "#fee2e2",
-      padding: 10,
-      borderRadius: 6,
-      marginBottom: 16,
-      textAlign: "center",
-      fontSize: 14,
-    },
-    label: { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 8 },
-    roleContainer: {
-      flexDirection: "row",
-      gap: 8,
-      marginBottom: 16,
-    },
-    roleButton: {
-      flex: 1,
-      paddingVertical: 10,
-      borderWidth: 1,
-      borderColor: "#d1d5db",
-      borderRadius: 8,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#f9fafb",
-    },
-    roleButtonActive: {
-      borderColor: "#2563eb",
-      backgroundColor: "#eff6ff",
-    },
-    roleText: { fontSize: 12, fontWeight: "500", color: "#4b5563", textAlign: "center" },
-    roleTextActive: { color: "#2563eb", fontWeight: "700" },
-    input: {
-      height: 48,
-      borderColor: "#d1d5db",
-      borderWidth: 1,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      marginBottom: 12,
-      fontSize: 15,
-    },
-    textArea: { height: 75, textAlignVertical: "top", paddingTop: 8 },
-    prestadorSection: {
-      backgroundColor: "#f8fafc",
-      borderWidth: 1,
-      borderColor: "#e2e8f0",
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 14,
-    },
-    sectionHeader: {
-      fontSize: 14,
-      fontWeight: "bold",
-      color: "#1e293b",
-      marginBottom: 10,
-    },
-    row: { flexDirection: "row", gap: 10 },
-    halfInput: { flex: 1 },
-    button: {
-      backgroundColor: "#2563eb",
-      borderRadius: 8,
-      paddingVertical: 14,
-      alignItems: "center",
-      marginTop: 8,
-    },
-    disabled: { backgroundColor: "#9ca3af" },
-    buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-    link: { color: "#2563eb", fontSize: 15, textAlign: "center", marginTop: 20 },
+  formCard: {
+    width: "100%",
+    maxWidth: 400,
+  },
+  title: { fontSize: 28, fontWeight: "bold", textAlign: "center", marginBottom: 8 },
+  subtitle: { fontSize: 14, color: "#666", textAlign: "center", marginBottom: 24 },
+  errorText: {
+    color: "#dc2626",
+    backgroundColor: "#fee2e2",
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 16,
+    textAlign: "center",
+    fontSize: 14,
+  },
+  input: {
+    height: 48,
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  cardLabel: { fontSize: 14, color: "#666", marginBottom: 8 },
+  cardInput: {
+    width: "100%",
+    height: 52,
+    marginBottom: 16,
+  },
+  cardField: {
+    backgroundColor: "#fff",
+    color : "#111827",
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  button: {
+    backgroundColor: "#2563eb",
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  disabled: { backgroundColor: "#9ca3af" },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  link: { color: "#2563eb", fontSize: 15, textAlign: "center", marginTop: 20 },
 });

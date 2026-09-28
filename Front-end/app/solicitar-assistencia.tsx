@@ -1,3 +1,4 @@
+import { ShowAlert } from "@/components/alert";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -67,10 +68,12 @@ export default function SolicitarAssistencia() {
   async function enviar() {
     if (!categoriaId) {
       Alert.alert("Atenção", "Escolha o tipo de problema.");
+      ShowAlert("Atenção", "Escolha o tipo de problema.");
       return;
     }
     if (!coords) {
       Alert.alert("Atenção", "Precisamos da sua localização para acionar um prestador.");
+      ShowAlert("Atenção", "Precisamos da sua localização para acionar um prestador.");
       return;
     }
 
@@ -91,6 +94,7 @@ export default function SolicitarAssistencia() {
       });
     } catch (erro) {
       Alert.alert("Erro", erro instanceof ApiError ? erro.message : "Falha ao enviar a solicitação.");
+      ShowAlert("Erro", erro instanceof ApiError ? erro.message : "Falha ao enviar a solicitação.")
     } finally {
       setEnviando(false);
     }
