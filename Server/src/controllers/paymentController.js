@@ -6,7 +6,6 @@ async function criarSetupIntent(req, res) {
   const { usuario_id } = req.body;
 
   try {
-    // Busca o usuário e verifica se ele já tem cliente stripe
     const [rows] = await db.query(
       'SELECT stripe_customer_id, email, nome FROM usuarios WHERE id = ?',
       [usuario_id]
@@ -18,7 +17,6 @@ async function criarSetupIntent(req, res) {
 
     let { stripe_customer_id, email, nome } = rows[0];
 
-    // Se não tiver, cria o cliente no Stripe e salva no banco
     if (!stripe_customer_id) {
       const customer = await stripe.customers.create({ email, name: nome });
       stripe_customer_id = customer.id;
@@ -29,7 +27,6 @@ async function criarSetupIntent(req, res) {
       );
     }
 
-    // Cria o SetupIntent normalmente
     const setupIntent = await stripe.setupIntents.create({
       customer: stripe_customer_id,
       payment_method_types: ['card'],
@@ -43,7 +40,11 @@ async function criarSetupIntent(req, res) {
 }
 
 async function listarCartoes(req, res) {
-  const { usuario_id } = req.params;
+  const usuario_id = req.query.usuario_id || req.params.usuario_id;
+
+  if (!usuario_id) {
+    return res.status(400).json({ erro: 'ID do usuário é obrigatório.' });
+  }
 
   try {
     const [cartoes] = await db.query(
@@ -64,7 +65,8 @@ async function listarCartoes(req, res) {
     return res.json(cartoes);
   } catch (error) {
     console.error('Erro ao listar cartões:', error);
-    return res.status(500).json({ erro: 'Erro interno ao listar cartões.' });  }
+    return res.status(500).json({ erro: 'Erro interno ao listar cartões.' });
+  }
 }
 
 async function criarTransacao(req, res) {
@@ -103,7 +105,6 @@ async function criarTransacao(req, res) {
   }
 }
 
-// Salvar o cartão no  banco
 async function salvarCartao(req, res) {
   const { usuario_id, payment_method_id, ultimos_digitos, bandeira, validade_mes, validade_ano } = req.body;
 
@@ -121,71 +122,61 @@ async function salvarCartao(req, res) {
   }
 }
 
-// Cobrar quando o serviço é concluído
+// Declarada como função local padronizada
 async function cobrarCartao(req, res) {
-  const { transacao_id } = req.body;
-
-  if (!transacao_id) {
-    return res.status(400).json({ erro: 'Informe o id da transação.' });
-  }
+  const { transacao_id, metodo_pagamento } = req.body;
 
   try {
-    const [rows] = await db.query(`
-      SELECT 
-        t.id AS transacao_id,
-        s.valor_estimado,
-        u.stripe_customer_id,
-        c.token_gateway
-      FROM transacoes t
-      JOIN solicitacoes s ON s.id = t.solicitacao_id
-      JOIN usuarios u ON s.cliente_id = u.id
-      JOIN cartoes_usuario c ON c.usuario_id = u.id
-      WHERE t.id = ?
-      ORDER BY c.principal DESC, c.criado_em DESC
-      LIMIT 1
-    `, [transacao_id]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ erro: 'Transação, usuário ou cartão principal não encontrado.' });
-    }
-
-    const { valor_estimado, stripe_customer_id, token_gateway, transacao_id: id } = rows[0];
-
-    if (!stripe_customer_id || !token_gateway) {
-      return res.status(400).json({ erro: 'Usuário sem cartão cadastrado.' });
-    }
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(valor_estimado * 100),
-      currency: 'brl',
-      customer: stripe_customer_id,
-      payment_method: token_gateway,
-      off_session: true,
-      confirm: true,
-    });
-
-    await db.query(
-      'UPDATE transacoes SET stripe_payment_intent_id = ?, valor = ?, status = ? WHERE id = ?',
-      [paymentIntent.id, valor_estimado, paymentIntent.status, id]
+    const [transacoes] = await db.query(
+      'SELECT * FROM transacoes WHERE id = ?',
+      [transacao_id]
     );
 
-    if (paymentIntent.status !== 'succeeded') {
-      return res.status(402).json({ erro: 'Pagamento não autorizado.', status: paymentIntent.status });
+    if (transacoes.length === 0) {
+      return res.status(404).json({ erro: 'Transação não encontrada.' });
     }
 
-    res.json({ sucesso: true, status: paymentIntent.status });
-  } catch (error) {
-    console.error(error);
+    const transacao = transacoes[0];
 
-    // Se o erro for do Stripe (ex: cartão recusado), registra na tabela também
-    if (transacao_id) {
+    // Trata pagamentos PIX ou DINHEIRO diretamente sem exigir Stripe
+    if (metodo_pagamento === 'PIX' || metodo_pagamento === 'DINHEIRO') {
       await db.query(
-        'UPDATE transacoes SET status = ? WHERE id = ?',
-        ['failed', transacao_id]
+        "UPDATE transacoes SET status = 'PAGO' WHERE id = ?",
+        [transacao_id]
       );
+
+      await db.query(
+        "UPDATE solicitacoes SET status = 'EM_ANDAMENTO' WHERE id = ?",
+        [transacao.solicitacao_id]
+      );
+
+      return res.json({
+        sucesso: true,
+        mensagem: `Pagamento via ${metodo_pagamento} registrado com sucesso!`,
+      });
     }
 
-    res.status(500).json({ erro: error.message });
+    // Lógica para Cartão de Crédito
+    const [cartoes] = await db.query(
+      'SELECT * FROM cartoes_usuario WHERE usuario_id = ? AND principal = 1',
+      [transacao.usuario_id]
+    );
+
+    if (cartoes.length === 0) {
+      return res.status(400).json({
+        erro: 'Nenhum cartão principal encontrado para este usuário.',
+      });
+    }
+
+    await db.query(
+      "UPDATE transacoes SET status = 'PAGO' WHERE id = ?",
+      [transacao_id]
+    );
+
+    return res.json({ sucesso: true, mensagem: 'Pagamento via Cartão realizado!' });
+  } catch (error) {
+    console.error('Erro na cobrança:', error);
+    return res.status(500).json({ erro: error.message });
   }
 }
 

@@ -1,44 +1,35 @@
 import * as Location from "expo-location";
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
-  SafeAreaView,
+  BackHandler,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+
 import MapaTempoReal from "../components/(componentes-mapas)/MapaTempoReal";
 import { ShowAlert } from "@/components/alert";
 
-interface Prestador {
-  prestador_id: number;
-  nome: string;
-  telefone: string;
-  nome_fantasia: string;
-  latitude_atual: number | string | null;
-  longitude_atual: number | string | null;
-  preco_base: number;
-}
-
-interface Cartao {
-  id: number;
-  bandeira: string | null;
-  ultimos_digitos: string;
-  validade_mes: number | null;
-  validade_ano: number | null;
-  apelido: string | null;
-  principal: boolean | number;
-}
+// Importações centralizadas do arquivo de serviços
+import {
+  cancelarSolicitacao,
+  CartaoUsuario,
+  criarSolicitacao,
+  listarCartoes,
+  listarMinhasSolicitacoes,
+  Prestador,
+} from "../src/services/api";
 
 // TODO: substituir pelo ID do usuário logado na sessão real
 const CLIENTE_ID = 1;
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api"; // coloquei como global para todos acessarem
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api";
 
 export default function TelaMapa() {
   const router = useRouter();
@@ -58,24 +49,56 @@ export default function TelaMapa() {
   const [carregandoPrestadores, setCarregandoPrestadores] = useState(true);
   const [prestadorSelecionado, setPrestadorSelecionado] = useState<Prestador | null>(null);
 
-  // CANCELAMENTO AUTOMÁTICO AO SAIR DO MAPA
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api";
+  // Referência mutável para acessar o ID da solicitação atualizado no cleanup de desmontagem
+  const solicitacaoIdRef = useRef<number | null>(null);
 
-        fetch(`${API_URL}/solicitacoes/cancelar`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ cliente_id: CLIENTE_ID }),
-        }).catch((err) => console.error("Erro ao cancelar solicitação ao sair do mapa:", err));
-      };
-    }, [])
-  );
+  useEffect(() => {
+    solicitacaoIdRef.current = solicitacaoId;
+  }, [solicitacaoId]);
 
-  // 1. Monitoramento do GPS do Cliente
+  // 1. CANCELAMENTO AUTOMÁTICO NA DESMONTAGEM DA TELA (Ao sair do Mapa por qualquer via)
+  useEffect(() => {
+    return () => {
+      if (solicitacaoIdRef.current) {
+        const idParaCancelar = solicitacaoIdRef.current;
+        cancelarSolicitacao(idParaCancelar)
+          .then(() => console.log(`✅ Solicitação ${idParaCancelar} cancelada automaticamente ao sair da tela.`))
+          .catch((err) => console.error("Erro ao cancelar solicitação ao sair:", err));
+      }
+    };
+  }, []);
+
+  // 2. TRATAMENTO DO BOTÃO VOLTAR FÍSICO / GESTOS DO DISPOSITIVO
+  useEffect(() => {
+    const onBackPress = () => {
+      if (solicitacaoId) {
+        cancelarSolicitacao(solicitacaoId)
+          .then(() => console.log("✅ Solicitação cancelada via botão voltar físico/gesto."))
+          .catch((err) => console.error("Erro ao cancelar via botão físico:", err));
+      }
+      return false; // Permite que a navegação do sistema continue normalmente
+    };
+
+    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => subscription.remove();
+  }, [solicitacaoId]);
+
+  // Função para ação do botão Voltar da interface (UI)
+  const handleVoltar = async () => {
+    if (solicitacaoId) {
+      try {
+        await cancelarSolicitacao(solicitacaoId);
+        console.log("✅ Solicitação cancelada com sucesso antes de sair.");
+      } catch (err) {
+        console.error("Erro ao cancelar solicitação ao voltar:", err);
+      } finally {
+        setSolicitacaoId(null);
+      }
+    }
+    router.back();
+  };
+
+  // 3. Monitoramento do GPS do Cliente
   useEffect(() => {
     let inscricaoGPS: Location.LocationSubscription | null = null;
 
@@ -111,7 +134,7 @@ export default function TelaMapa() {
     };
   }, []);
 
-  // 2. Busca Prestadores no Backend
+  // 4. Busca Prestadores no Backend
   useEffect(() => {
     async function buscarPrestadores() {
       if (!categoria_id) {
@@ -121,7 +144,6 @@ export default function TelaMapa() {
 
       try {
         setCarregandoPrestadores(true);
-        const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api";
         const response = await fetch(`${API_URL}/prestadores/categoria/${categoria_id}`);
         const data = await response.json();
 
@@ -162,7 +184,7 @@ export default function TelaMapa() {
   }, [prestadorSelecionado?.latitude_atual, prestadorSelecionado?.longitude_atual]);
 
   // Configurando a tela de pagamentos
-  const [cartoes, setCartoes] = useState<Cartao[]>([]);
+  const [cartoes, setCartoes] = useState<CartaoUsuario[]>([]);
   const [carregandoCartoes, setCarregandoCartoes] = useState(false);
   const [mostrarPagamentos, setMostrarPagamentos] = useState(false);
   const [barraPagamento] = useState(() => new Animated.Value(260));
@@ -178,18 +200,12 @@ export default function TelaMapa() {
     }).start();
   }, [barraPagamento, mostrarPagamentos]);
 
-  // Lógica para listar todos os cartões do usuário
+  // Lógica para listar todos os cartões do usuário usando o api.ts
   useEffect(() => {
     async function buscarCartoes() {
       try {
         setCarregandoCartoes(true);
-        const response = await fetch(`${API_URL}/pagamento/${CLIENTE_ID}/cartoes`);
-        const data = await response.json(); 
-
-        if (!response.ok) {
-          throw new Error(data.erro || "Falha ao buscar cartões salvos.");
-        }
-
+        const data = await listarCartoes(CLIENTE_ID);
         setCartoes(data);
       } catch (error) {
         console.error("Erro ao buscar cartões:", error);
@@ -201,11 +217,15 @@ export default function TelaMapa() {
     buscarCartoes();
   }, []);
 
-  async function realizarPagamento(solicitacaoId: number) {
+  // Envia a cobrança incluindo o método de pagamento selecionado
+  async function realizarPagamento(transacaoId: number, metodo: string) {
     const response = await fetch(`${API_URL}/pagamento/cobrar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transacao_id: solicitacaoId }),
+      body: JSON.stringify({
+        transacao_id: transacaoId,
+        metodo_pagamento: metodo,
+      }),
     });
     const data = await response.json();
 
@@ -214,7 +234,68 @@ export default function TelaMapa() {
     }
   }
 
-  async function processarPagamento() {
+  // Função disparada ao clicar no botão 'Chamar'
+  async function handleChamarPrestador(item: Prestador) {
+    const prestadorId = item.id || (item as any).prestador_id;
+    console.log("👉 Botão Chamar clicado para o prestador:", prestadorId);
+
+    setPrestadorSelecionado(item);
+
+    if (!clienteCoords) {
+      ShowAlert("Atenção", "Obtendo localização do GPS...");
+      return;
+    }
+
+    try {
+      // 1. Tenta criar uma nova solicitação no backend
+      const novaSolicitacao = await criarSolicitacao({
+        cliente_id: CLIENTE_ID,
+        categoria_id: Number(categoria_id) || 1,
+        latitude_origem: clienteCoords.latitude,
+        longitude_origem: clienteCoords.longitude,
+        descricao_problema: "Solicitação via Mapa",
+      });
+
+      if (novaSolicitacao?.id) {
+        setSolicitacaoId(novaSolicitacao.id);
+        setMostrarPagamentos(true);
+        console.log("✅ Nova solicitação criada. ID:", novaSolicitacao.id);
+      }
+    } catch (error: any) {
+      // 2. Se já existir uma solicitação em andamento, busca a solicitação ativa
+      if (
+        error?.message?.includes("solicitacao em andamento") ||
+        error?.message?.includes("já possui")
+      ) {
+        try {
+          const solicitacoes = await listarMinhasSolicitacoes(CLIENTE_ID);
+
+          const ativa = solicitacoes.find(
+            (s) =>
+              s.status === "PENDENTE" ||
+              s.status === "ACEITO" ||
+              s.status === "EM_ANDAMENTO"
+          );
+
+          if (ativa?.id) {
+            setSolicitacaoId(ativa.id);
+            setMostrarPagamentos(true);
+            console.log("🔄 Solicitação ativa recuperada. ID:", ativa.id);
+            return;
+          }
+        } catch (errBusca) {
+          console.error("Erro ao buscar solicitações ativas:", errBusca);
+        }
+      }
+
+      Alert.alert(
+        "Erro",
+        error?.message || "Não foi possível processar a solicitação."
+      );
+    }
+  }
+
+  async function processarPagamento(metodo: "PIX" | "DINHEIRO" | "CARTAO" = "PIX") {
     if (!solicitacaoId) {
       ShowAlert("Erro", "Crie uma solicitação antes de pagar.");
       return;
@@ -234,11 +315,17 @@ export default function TelaMapa() {
         throw new Error(transacao.erro || "Não foi possível criar a transação.");
       }
 
-      await realizarPagamento(transacao.id);
+      await realizarPagamento(transacao.id, metodo);
       setMostrarPagamentos(false);
+      
+      // Limpa a solicitação do estado local após o pagamento concluído
+      setSolicitacaoId(null);
       Alert.alert("Sucesso", "Pagamento realizado com sucesso!");
     } catch (error) {
-      Alert.alert("Erro no pagamento", error instanceof Error ? error.message : "Tente novamente.");
+      Alert.alert(
+        "Erro no pagamento",
+        error instanceof Error ? error.message : "Tente novamente."
+      );
     } finally {
       setProcessandoPagamento(false);
     }
@@ -247,7 +334,6 @@ export default function TelaMapa() {
   if (!clienteCoords && !erroGps) {
     return (
       <View style={styles.carregandoContainer}>
-        {/* Desativa o cabeçalho mesmo na tela de carregamento */}
         <Stack.Screen options={{ headerShown: false }} />
         <ActivityIndicator size="large" color="#fcf7f7" />
         <Text style={styles.textoCarregando}>Obtendo sua localização...</Text>
@@ -257,7 +343,6 @@ export default function TelaMapa() {
 
   return (
     <View style={styles.container}>
-      {/* DESATIVA COMPLETAMENTE O CABEÇALHO NATIVO */}
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* MAPA EM SEGUNDO PLANO */}
@@ -274,7 +359,7 @@ export default function TelaMapa() {
       <SafeAreaView style={styles.overlay} pointerEvents="box-none">
         <TouchableOpacity
           style={[styles.botaoVoltar, { marginTop: insets.top + 10 }]}
-          onPress={() => router.back()}
+          onPress={handleVoltar}
         >
           <Text style={styles.voltarTexto}>{"<"} Voltar</Text>
         </TouchableOpacity>
@@ -292,12 +377,15 @@ export default function TelaMapa() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.listaHorizontal}
             >
-              {prestadores.map((item) => {
-                const isSelected = prestadorSelecionado?.prestador_id === item.prestador_id;
+              {prestadores.map((item, index) => {
+                const itemId = item.id || (item as any).prestador_id || index;
+                const isSelected =
+                  prestadorSelecionado?.id === item.id ||
+                  (prestadorSelecionado as any)?.prestador_id === itemId;
 
                 return (
                   <View
-                    key={item.prestador_id}
+                    key={`prestador-${itemId}`}
                     style={[
                       styles.cardMecanico,
                       isSelected && styles.cardSelecionado,
@@ -307,14 +395,18 @@ export default function TelaMapa() {
                       activeOpacity={0.8}
                       onPress={() => setPrestadorSelecionado(item)}
                     >
-                      <Text style={styles.nomeMecanico}>{item.nome_fantasia || item.nome}</Text>
+                      <Text style={styles.nomeMecanico}>
+                        {item.nome_fantasia || (item as any).nome || `Prestador #${itemId}`}
+                      </Text>
                       <Text style={styles.infoMecanico}>
-                        R$ {Number(item.preco_base).toFixed(2)}
+                        {item.raio_atendimento_km
+                          ? `Raio: ${item.raio_atendimento_km} km`
+                          : `R$ ${Number((item as any).preco_base || 0).toFixed(2)}`}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.botaoChamar}
-                      onPress={() => setPrestadorSelecionado(item)}
+                      onPress={() => handleChamarPrestador(item)}
                       disabled={processandoPagamento}
                     >
                       <Text style={styles.textoBotao}>Chamar</Text>
@@ -327,6 +419,7 @@ export default function TelaMapa() {
         </View>
       </SafeAreaView>
 
+      {/* BARRA DE PAGAMENTO */}
       {mostrarPagamentos && (
         <Animated.View
           style={[styles.barraPagamento, { transform: [{ translateY: barraPagamento }] }]}
@@ -342,9 +435,10 @@ export default function TelaMapa() {
             </TouchableOpacity>
           </View>
           <View style={styles.opcoesPagamento}>
+            {/* Opção PIX */}
             <TouchableOpacity
               style={styles.opcaoPagamento}
-              onPress={processarPagamento}
+              onPress={() => processarPagamento("PIX")}
               disabled={processandoPagamento}
             >
               {processandoPagamento ? (
@@ -357,17 +451,18 @@ export default function TelaMapa() {
               )}
             </TouchableOpacity>
 
+            {/* Opção Cartões de Crédito */}
             {carregandoCartoes ? (
               <View style={styles.opcaoPagamento}>
                 <ActivityIndicator size="small" color="#38bdf8" />
                 <Text style={styles.textoOpcaoPagamento}>Cartões</Text>
               </View>
             ) : (
-              cartoes.map((cartao) => (
+              cartoes.map((cartao, index) => (
                 <TouchableOpacity
-                  key={cartao.id}
+                  key={`cartao-${cartao.id || index}`}
                   style={styles.opcaoPagamento}
-                  onPress={processarPagamento}
+                  onPress={() => processarPagamento("CARTAO")}
                   disabled={processandoPagamento}
                 >
                   <Text style={styles.textoOpcaoPagamento}>
@@ -377,9 +472,10 @@ export default function TelaMapa() {
               ))
             )}
 
+            {/* Opção Dinheiro */}
             <TouchableOpacity
               style={styles.opcaoPagamento}
-              onPress={processarPagamento}
+              onPress={() => processarPagamento("DINHEIRO")}
               disabled={processandoPagamento}
             >
               <Text style={styles.iconePagamento}>R$</Text>

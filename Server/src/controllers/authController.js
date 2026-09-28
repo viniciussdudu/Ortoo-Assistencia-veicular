@@ -4,14 +4,14 @@ const db = require("../config/db");
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function isValidCpf(cpf) {
+  // Verifica formato de 11 dígitos e bloqueia sequências repetidas (ex: 11111111111)
   if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
 
   const calculateDigit = (base, factor) => {
     const sum = base
-    .split("")
-    .reduce((total, digit) => total + Number(digit) * factor--, 0);
+      .split("")
+      .reduce((total, digit) => total + Number(digit) * factor--, 0);
     const remainder = (sum * 10) % 11;
-    return false;
     return remainder === 10 ? 0 : remainder;
   };
 
