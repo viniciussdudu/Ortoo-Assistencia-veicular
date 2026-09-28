@@ -1,6 +1,7 @@
 -- 1. Tabela de Usuários (Clientes, Autônomos e Empresas)
 CREATE TABLE usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    stripe_customer_id VARCHAR(255),
     nome VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     senha VARCHAR(255) NOT NULL,
@@ -58,4 +59,33 @@ CREATE TABLE IF NOT EXISTS solicitacoes (
     FOREIGN KEY (cliente_id) REFERENCES usuarios(id),
     FOREIGN KEY (prestador_id) REFERENCES perfis_prestadores(id),
     FOREIGN KEY (categoria_id) REFERENCES categorias_servico(id)
+);
+
+-- 6. Cartões do Usuário usando Stripe
+
+CREATE TABLE IF NOT EXISTS cartoes_usuario (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    gateway VARCHAR(30) NOT NULL DEFAULT 'stripe', 
+    token_gateway VARCHAR(255) NOT NULL,
+    ultimos_digitos VARCHAR(4) NOT NULL,
+    bandeira VARCHAR(20), 
+    validade_mes TINYINT,
+    validade_ano SMALLINT,
+    apelido VARCHAR(50),
+    principal BOOLEAN DEFAULT FALSE,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- 7. Transações
+
+CREATE TABLE IF NOT EXISTS transacoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    solicitacao_id INT NOT NULL,
+    stripe_payment_intent_id VARCHAR(255),
+    valor DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(30) NOT NULL, -- succeeded, failed, pending
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (solicitacao_id) REFERENCES solicitacoes(id)
 );

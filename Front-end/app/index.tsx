@@ -1,6 +1,17 @@
 import { Stack, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ShowAlert } from "../components/alert";
 import { ApiError, login } from "../src/services/api";
@@ -19,77 +30,210 @@ export default function Index() {
     setSubmitting(true);
 
     try {
-      await login({ email, password });
-      ShowAlert("Login realizado", "Seus dados estão corretos.");
+      // 1. Recebe o objeto do usuário logado do MySQL
+      const usuario = await login({ email, password });
+
+      // 2. Redireciona conforme o tipo de usuário cadastrado no banco
+      if (usuario.tipo_usuario === "CLIENTE") {
+        router.replace("/home");
+      } else {
+        router.replace("/mecanico");
+      }
     } catch (error) {
-      ShowAlert("Não foi possível entrar", error instanceof ApiError ? error.message : "Tente novamente.");
+      ShowAlert(
+        "Não foi possível entrar",
+        error instanceof ApiError ? error.message : "Tente novamente."
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: "Örtöö" }} />
-      <Text style={styles.title}>Login</Text>
+    <SafeAreaView style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
 
-      <TextInput
-        style={styles.input}
-        placeholder="E-mail"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.formCard}>
+            {/* Header da Marca */}
+            <View style={styles.header}>
+              <Text style={styles.brandTitle}>Örtöö</Text>
+              <Text style={styles.subtitle}>
+                Assistência veicular rápida e em tempo real.
+              </Text>
+            </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Senha"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+            {/* Formulário */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>E-mail</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="seu.email@exemplo.com"
+                placeholderTextColor="#6b7280"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
 
-      <Button 
-        title="Entrar" 
-        onPress={handleLogin} 
-        disabled={!isFormValid || submitting} 
-      />
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Senha</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor="#6b7280"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
 
-      <Button
-        title="recuperar senha"
-        onPress={() => router.push("/recuperar-senha")}
-      />
+            
 
+            {/* Botão de Entrar */}
+            <TouchableOpacity
+              style={[
+                styles.button,
+                (!isFormValid || submitting) && styles.buttonDisabled,
+              ]}
+              onPress={handleLogin}
+              disabled={!isFormValid || submitting}
+              activeOpacity={0.8}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <Text style={styles.buttonText}>Entrar</Text>
+              )}
+            </TouchableOpacity>
 
-      <Button
-        title="Criar conta"
-        onPress={() => router.push("/cadastro")}
-      />
+            <TouchableOpacity
+              style={styles.esqueciSenhaBtn}
+              onPress={() => router.push("/recuperar-senha")}
+            >
+              <Text style={styles.esqueciSenhaTexto}>Esqueceu a senha?</Text>
+            </TouchableOpacity>
 
-    </View>
+            {/* Rodapé / Link Criar Conta */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Não tem uma conta?</Text>
+              <TouchableOpacity onPress={() => router.push("/cadastro")}>
+                <Text style={styles.linkTexto}> Criar conta</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
-
 }
 
-  const styles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    gap: 16,
+    backgroundColor: "#000000",
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
     justifyContent: "center",
-    alignItems: "center", // Centraliza o formulário na Web
+    alignItems: "center",
     paddingHorizontal: 24,
-    backgroundColor: "#fff"
+    paddingVertical: 32,
   },
   formCard: {
-    width: "100%",     // Ocupa a largura total em telas mobile
-    maxWidth: 400,    // Limita o tamanho em 400px no computador
+    width: "100%",
+    maxWidth: 400,
   },
-  title: { fontSize: 28, fontWeight: "bold", textAlign: "center", marginBottom: 8 },
-  subtitle: { fontSize: 14, color: "#666", textAlign: "center", marginBottom: 24 },
-  input: { height: 48, borderColor: "#ccc", borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, marginBottom: 16 },
-  button: { backgroundColor: "#2563eb", borderRadius: 8, paddingVertical: 14, alignItems: "center", margin: 1000 },
-  disabled: { backgroundColor: "#9ca3af" },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  link: { color: "#2563eb", fontSize: 15, textAlign: "center", marginTop: 20 },
+  header: {
+    alignItems: "center",
+    marginBottom: 36,
+  },
+  brandTitle: {
+    fontSize: 40,
+    fontWeight: "800",
+    color: "#ffffff",
+    letterSpacing: -1,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#9ca3af",
+    textAlign: "center",
+    marginTop: 8,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#d1d5db",
+    marginBottom: 6,
+  },
+  input: {
+    height: 52,
+    backgroundColor: "#111827",
+    borderColor: "#1f2937",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    color: "#ffffff",
+    fontSize: 15,
+  },
+  esqueciSenhaBtn: {
+    alignSelf: "flex-end",
+    marginBottom: 24,
+  },
+  esqueciSenhaTexto: {
+    color: "#38bdf8",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  button: {
+    height: 52,
+    backgroundColor: "#2563eb",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonDisabled: {
+    backgroundColor: "#1f2937",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  buttonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 28,
+  },
+  footerText: {
+    color: "#9ca3af",
+    fontSize: 14,
+  },
+  linkTexto: {
+    color: "#38bdf8",
+    fontSize: 14,
+    fontWeight: "700",
+  },
 });
