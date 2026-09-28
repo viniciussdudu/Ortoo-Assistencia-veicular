@@ -14,53 +14,37 @@ async function listarCategorias(req, res) {
   }
 }
 
+// Server/src/controllers/solicitacaoController.js
+
 async function criarSolicitacao(req, res) {
-  // TODO: quando houver sessao, tirar cliente_id do body e ler do usuario autenticado.
-  const { cliente_id, categoria_id, descricao_problema, latitude_origem, longitude_origem } = req.body;
-
-  const faltando = CAMPOS_OBRIGATORIOS.filter((campo) => req.body[campo] === undefined || req.body[campo] === null);
-  if (faltando.length > 0) {
-    return res.status(400).json({ erro: `Campos obrigatorios ausentes: ${faltando.join(", ")}.` });
-  }
-
-  const lat = Number(latitude_origem);
-  const lng = Number(longitude_origem);
-  if (Number.isNaN(lat) || lat < -90 || lat > 90 || Number.isNaN(lng) || lng < -180 || lng > 180) {
-    return res.status(400).json({ erro: "Coordenadas invalidas." });
-  }
+  const { cliente_id, categoria_id, latitude_origem, longitude_origem, descricao_problema } = req.body;
 
   try {
-    const [pendentes] = await db.query(
-      "SELECT id FROM solicitacoes WHERE cliente_id = ? AND status IN ('PENDENTE', 'ACEITO', 'EM_ANDAMENTO') LIMIT 1",
+    // 1. Cancela automaticamente qualquer solicitação 'PENDENTE' anterior do mesmo cliente
+    await db.query(
+      `UPDATE solicitacoes 
+       SET status = 'CANCELADO' 
+       WHERE cliente_id = ? AND status = 'PENDENTE'`,
       [cliente_id]
     );
-    if (pendentes.length > 0) {
-      return res.status(409).json({ erro: "Voce ja possui uma solicitacao em andamento." });
-    }
 
+    // 2. Insere a nova solicitação
     const [resultado] = await db.query(
-      `INSERT INTO solicitacoes
-        (cliente_id, categoria_id, descricao_problema, latitude_origem, longitude_origem, status)
+      `INSERT INTO solicitacoes 
+        (cliente_id, categoria_id, latitude_origem, longitude_origem, descricao_problema, status) 
        VALUES (?, ?, ?, ?, ?, 'PENDENTE')`,
-      [cliente_id, categoria_id, descricao_problema ?? null, lat, lng]
+      [cliente_id, categoria_id, latitude_origem, longitude_origem, descricao_problema]
     );
 
-    const [criada] = await db.query(
-      `SELECT s.id, s.status, s.descricao_problema, s.latitude_origem, s.longitude_origem,
-              s.criado_em, c.nome AS categoria_nome
-         FROM solicitacoes s
-         JOIN categorias_servico c ON c.id = s.categoria_id
-        WHERE s.id = ?`,
-      [resultado.insertId]
-    );
-
-    return res.status(201).json(criada[0]);
-  } catch (erro) {
-    if (erro.code === "ER_NO_REFERENCED_ROW_2") {
-      return res.status(400).json({ erro: "Cliente ou categoria inexistente." });
-    }
-    console.error(erro);
-    return res.status(500).json({ erro: "Nao foi possivel registrar a solicitacao." });
+    return res.status(201).json({
+      id: resultado.insertId,
+      cliente_id,
+      categoria_id,
+      status: 'PENDENTE',
+    });
+  } catch (error) {
+    console.error('Erro ao criar solicitação:', error);
+    return res.status(500).json({ erro: error.message });
   }
 }
 

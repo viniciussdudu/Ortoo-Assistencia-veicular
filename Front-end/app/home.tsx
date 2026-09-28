@@ -1,27 +1,29 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { ApiError, Categoria, listarCategorias } from "../src/services/api";
 
 const CORES = {
-  fundo: "#F3EBDA",
-  primaria: "#1F3140",
-  destaque: "#C85A34",
-  destaqueSuave: "#FBEDE6",
-  cartao: "#FFFFFF",
-  texto: "#1F3140",
-  textoSuave: "#7A7266",
-  borda: "#EAE2D2",
+  fundo: "#000000",
+  cartao: "#111827",
+  borda: "#1f2937",
+  primaria: "#2563eb",
+  destaque: "#38bdf8",
+  destaqueSuave: "rgba(56, 189, 248, 0.1)",
+  texto: "#ffffff",
+  textoSuave: "#9ca3af",
 };
 
 const ICONES: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
@@ -58,7 +60,7 @@ export default function Home() {
       setErro(
         e instanceof ApiError
           ? e.message
-          : "Não foi possível carregar os serviços.",
+          : "Não foi possível carregar os serviços."
       );
     } finally {
       setCarregando(false);
@@ -71,7 +73,7 @@ export default function Home() {
     return categorias.filter(
       (c) =>
         c.nome.toLowerCase().includes(termo) ||
-        (c.descricao ?? "").toLowerCase().includes(termo),
+        (c.descricao ?? "").toLowerCase().includes(termo)
     );
   }, [busca, categorias]);
 
@@ -85,156 +87,172 @@ export default function Home() {
   }
 
   return (
-    <ScrollView
-      style={styles.tela}
-      contentContainerStyle={styles.scroll}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.conteudo}>
-        <View style={styles.cabecalho}>
-          <View>
-            <Text style={styles.marca}>Örtöö</Text>
-            <Text style={styles.marcaSub}>Assistência veicular</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.botaoPerfil}
-            onPress={() => router.push("/perfil")}
-          >
-            <MaterialCommunityIcons
-              name="account-outline"
-              size={22}
-              color={CORES.primaria}
-            />
-          </TouchableOpacity>
-        </View>
+    <SafeAreaView style={styles.tela}>
+      <Stack.Screen options={{ headerShown: false }} />
 
-        <Text style={styles.titulo}>O que aconteceu{"\n"}com seu veículo?</Text>
-        <Text style={styles.subtitulo}>
-          Escolha o tipo de problema e encontramos quem pode te ajudar por perto.
-        </Text>
-
-        <TouchableOpacity
-          style={styles.sos}
-          activeOpacity={0.85}
-          onPress={() => abrirSolicitacao()}
-        >
-          <View style={styles.sosIcone}>
-            <MaterialCommunityIcons name="lifebuoy" size={26} color="#FFF" />
-          </View>
-          <View style={styles.sosTextos}>
-            <Text style={styles.sosTitulo}>Pedir ajuda agora</Text>
-            <Text style={styles.sosSubtitulo}>
-              Não sabe o problema? Descreva na próxima tela.
-            </Text>
-          </View>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#FFF" />
-        </TouchableOpacity>
-
-        <View style={styles.buscaCaixa}>
-          <MaterialCommunityIcons
-            name="magnify"
-            size={20}
-            color={CORES.textoSuave}
-          />
-          <TextInput
-            style={styles.buscaInput}
-            placeholder="Buscar serviço"
-            placeholderTextColor={CORES.textoSuave}
-            value={busca}
-            onChangeText={setBusca}
-            autoCapitalize="none"
-          />
-          {busca.length > 0 && (
-            <TouchableOpacity onPress={() => setBusca("")}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.conteudo}>
+          {/* CABEÇALHO */}
+          <View style={styles.cabecalho}>
+            <View>
+              <Text style={styles.marca}>Örtöö</Text>
+              <Text style={styles.marcaSub}>Assistência veicular</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.botaoPerfil}
+              onPress={() => router.push("/perfil")}
+              activeOpacity={0.8}
+            >
               <MaterialCommunityIcons
-                name="close-circle"
-                size={18}
-                color={CORES.textoSuave}
+                name="account-outline"
+                size={22}
+                color={CORES.texto}
               />
             </TouchableOpacity>
-          )}
-        </View>
+          </View>
 
-        <Text style={styles.secao}>Serviços disponíveis</Text>
+          {/* TITULO */}
+          <Text style={styles.titulo}>
+            O que aconteceu{"\n"}com seu veículo?
+          </Text>
+          <Text style={styles.subtitulo}>
+            Escolha o tipo de problema e encontramos quem pode te ajudar por
+            perto.
+          </Text>
 
-        {carregando ? (
-          <ActivityIndicator
-            size="large"
-            color={CORES.destaque}
-            style={styles.carregando}
-          />
-        ) : erro ? (
-          <View style={styles.cartaoErro}>
+          {/* CARD SOS */}
+          <TouchableOpacity
+            style={styles.sos}
+            activeOpacity={0.85}
+            onPress={() => abrirSolicitacao()}
+          >
+            <View style={styles.sosIcone}>
+              <MaterialCommunityIcons name="lifebuoy" size={26} color="#FFF" />
+            </View>
+            <View style={styles.sosTextos}>
+              <Text style={styles.sosTitulo}>Pedir ajuda agora</Text>
+              <Text style={styles.sosSubtitulo}>
+                Não sabe o problema? Descreva na próxima tela.
+              </Text>
+            </View>
             <MaterialCommunityIcons
-              name="wifi-off"
-              size={28}
+              name="chevron-right"
+              size={24}
+              color="#FFF"
+            />
+          </TouchableOpacity>
+
+          {/* BARRA DE BUSCA */}
+          <View style={styles.buscaCaixa}>
+            <MaterialCommunityIcons
+              name="magnify"
+              size={20}
               color={CORES.textoSuave}
             />
-            <Text style={styles.textoErro}>{erro}</Text>
-            <TouchableOpacity
-              style={styles.botaoRetry}
-              onPress={carregarCategorias}
-            >
-              <Text style={styles.botaoRetryTexto}>Tentar novamente</Text>
-            </TouchableOpacity>
-          </View>
-        ) : filtradas.length === 0 ? (
-          <Text style={styles.vazio}>
-            Nenhum serviço encontrado para &quot;{busca}&quot;.
-          </Text>
-        ) : (
-          <View style={styles.lista}>
-            {filtradas.map((categoria) => (
-              <TouchableOpacity
-                key={categoria.id}
-                style={styles.cartao}
-                activeOpacity={0.7}
-                onPress={() => abrirSolicitacao(categoria)}
-              >
-                <View style={styles.cartaoIcone}>
-                  <MaterialCommunityIcons
-                    name={iconeDe(categoria.nome)}
-                    size={22}
-                    color={CORES.destaque}
-                  />
-                </View>
-                <View style={styles.cartaoTextos}>
-                  <Text style={styles.cartaoNome}>{categoria.nome}</Text>
-                  {categoria.descricao ? (
-                    <Text style={styles.cartaoDescricao} numberOfLines={1}>
-                      {categoria.descricao}
-                    </Text>
-                  ) : null}
-                </View>
+            <TextInput
+              style={styles.buscaInput}
+              placeholder="Buscar serviço..."
+              placeholderTextColor={CORES.textoSuave}
+              value={busca}
+              onChangeText={setBusca}
+              autoCapitalize="none"
+            />
+            {busca.length > 0 && (
+              <TouchableOpacity onPress={() => setBusca("")}>
                 <MaterialCommunityIcons
-                  name="chevron-right"
-                  size={22}
+                  name="close-circle"
+                  size={18}
                   color={CORES.textoSuave}
                 />
               </TouchableOpacity>
-            ))}
+            )}
           </View>
-        )}
-      </View>
-    </ScrollView>
+
+          <Text style={styles.secao}>Serviços disponíveis</Text>
+
+          {/* LISTAGEM DE CATEGORIAS */}
+          {carregando ? (
+            <ActivityIndicator
+              size="large"
+              color={CORES.destaque}
+              style={styles.carregando}
+            />
+          ) : erro ? (
+            <View style={styles.cartaoErro}>
+              <MaterialCommunityIcons
+                name="wifi-off"
+                size={28}
+                color={CORES.textoSuave}
+              />
+              <Text style={styles.textoErro}>{erro}</Text>
+              <TouchableOpacity
+                style={styles.botaoRetry}
+                onPress={carregarCategorias}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.botaoRetryTexto}>Tentar novamente</Text>
+              </TouchableOpacity>
+            </View>
+          ) : filtradas.length === 0 ? (
+            <Text style={styles.vazio}>
+              Nenhum serviço encontrado para &quot;{busca}&quot;.
+            </Text>
+          ) : (
+            <View style={styles.lista}>
+              {filtradas.map((categoria) => (
+                <TouchableOpacity
+                  key={categoria.id}
+                  style={styles.cartao}
+                  activeOpacity={0.7}
+                  onPress={() => abrirSolicitacao(categoria)}
+                >
+                  <View style={styles.cartaoIcone}>
+                    <MaterialCommunityIcons
+                      name={iconeDe(categoria.nome)}
+                      size={22}
+                      color={CORES.destaque}
+                    />
+                  </View>
+                  <View style={styles.cartaoTextos}>
+                    <Text style={styles.cartaoNome}>{categoria.nome}</Text>
+                    {categoria.descricao ? (
+                      <Text style={styles.cartaoDescricao} numberOfLines={1}>
+                        {categoria.descricao}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={22}
+                    color={CORES.textoSuave}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const sombra = Platform.select({
-  web: { boxShadow: "0 1px 3px rgba(31,49,64,0.08)" },
-  default: {
-    shadowColor: "#1F3140",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-}) as object;
-
 const styles = StyleSheet.create({
-  tela: { flex: 1, backgroundColor: CORES.fundo },
-  scroll: { alignItems: "center", paddingVertical: 32 },
-  conteudo: { width: "100%", maxWidth: 520, paddingHorizontal: 20 },
+  tela: {
+    flex: 1,
+    backgroundColor: CORES.fundo,
+  },
+  scroll: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  conteudo: {
+    width: "100%",
+    maxWidth: 520,
+    paddingHorizontal: 20,
+  },
 
   cabecalho: {
     flexDirection: "row",
@@ -243,28 +261,34 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   marca: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: CORES.primaria,
-    letterSpacing: 0.5,
+    fontSize: 24,
+    fontWeight: "800",
+    color: CORES.texto,
+    letterSpacing: -0.5,
   },
-  marcaSub: { fontSize: 12, color: CORES.textoSuave, marginTop: 1 },
+  marcaSub: {
+    fontSize: 12,
+    color: CORES.textoSuave,
+    marginTop: 1,
+  },
   botaoPerfil: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: CORES.cartao,
+    borderWidth: 1,
+    borderColor: CORES.borda,
     alignItems: "center",
     justifyContent: "center",
-    ...sombra,
   },
 
   titulo: {
-    fontSize: 27,
-    fontWeight: "700",
+    fontSize: 28,
+    fontWeight: "800",
     color: CORES.texto,
-    lineHeight: 34,
+    lineHeight: 36,
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitulo: {
     fontSize: 14,
@@ -276,11 +300,15 @@ const styles = StyleSheet.create({
   sos: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: CORES.destaque,
+    backgroundColor: CORES.primaria,
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
-    ...sombra,
+    shadowColor: CORES.primaria,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   sosIcone: {
     width: 44,
@@ -293,7 +321,7 @@ const styles = StyleSheet.create({
   },
   sosTextos: { flex: 1 },
   sosTitulo: { color: "#FFF", fontSize: 16, fontWeight: "700" },
-  sosSubtitulo: { color: CORES.destaqueSuave, fontSize: 12, marginTop: 2 },
+  sosSubtitulo: { color: "#bfdbfe", fontSize: 12, marginTop: 2 },
 
   buscaCaixa: {
     flexDirection: "row",
@@ -311,7 +339,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: CORES.texto,
-    ...Platform.select({ web: { outlineStyle: "none" } }),
+    ...Platform.select({ web: { outlineStyle: "none" } as any }),
   },
 
   secao: {
@@ -320,17 +348,18 @@ const styles = StyleSheet.create({
     color: CORES.textoSuave,
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    marginBottom: 12,
+    marginBottom: 14,
   },
 
-  lista: { gap: 10 },
+  lista: { gap: 12 },
   cartao: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: CORES.cartao,
-    borderRadius: 14,
-    padding: 14,
-    ...sombra,
+    borderWidth: 1,
+    borderColor: CORES.borda,
+    borderRadius: 16,
+    padding: 16,
   },
   cartaoIcone: {
     width: 44,
@@ -343,15 +372,16 @@ const styles = StyleSheet.create({
   },
   cartaoTextos: { flex: 1 },
   cartaoNome: { fontSize: 15, fontWeight: "600", color: CORES.texto },
-  cartaoDescricao: { fontSize: 12.5, color: CORES.textoSuave, marginTop: 2 },
+  cartaoDescricao: { fontSize: 13, color: CORES.textoSuave, marginTop: 2 },
 
-  carregando: { marginTop: 24 },
+  carregando: { marginTop: 32 },
   cartaoErro: {
     backgroundColor: CORES.cartao,
-    borderRadius: 14,
+    borderColor: CORES.borda,
+    borderWidth: 1,
+    borderRadius: 16,
     padding: 24,
     alignItems: "center",
-    ...sombra,
   },
   textoErro: {
     color: CORES.textoSuave,
@@ -361,7 +391,7 @@ const styles = StyleSheet.create({
   },
   botaoRetry: {
     marginTop: 16,
-    backgroundColor: CORES.destaque,
+    backgroundColor: CORES.primaria,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 22,
