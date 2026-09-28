@@ -1,13 +1,14 @@
+import { Button } from "@react-navigation/elements";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { ApiError, getUserProfile, logout } from "../src/services/api";
 
@@ -139,6 +140,10 @@ export default function Perfil() {
       ) : (
         <Text style={styles.textoVazio}>Nenhum histórico encontrado.</Text>
       )}
+
+      <Button onPress={() => router.push("/adicionar-cartão")}>
+        Adicionar novo cartão
+      </Button>
 
       <TouchableOpacity
         style={[styles.botaoSair, saindo && styles.botaoSairDesabilitado]}

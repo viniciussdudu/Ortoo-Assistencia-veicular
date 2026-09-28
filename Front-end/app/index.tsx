@@ -67,6 +67,11 @@ export default function Index() {
         onPress={() => router.push("/cadastro")}
       />
 
+      <Button
+        title="testar-mapa"
+        onPress={() => router.push("/solicitar-assistencia")}
+      />
+
     </View>
   );
 

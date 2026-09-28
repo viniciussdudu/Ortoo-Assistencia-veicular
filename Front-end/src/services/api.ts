@@ -11,6 +11,10 @@ export type RegisterInput = {
   documento: string;
 };
 
+export type UserProfile = {
+  id: number;
+};
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -29,7 +33,7 @@ const apiUrl = (
 function getApiUrl() {
   if (!apiUrl) {
     throw new ApiError(
-      "A API nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o foi configurada. Crie um arquivo .env a partir de .env.example.",
+      "A API não foi configurada. Crie um arquivo .env a partir de .env.example.",
     );
   }
 
@@ -57,8 +61,10 @@ async function request<T>(
         ? {}
         : { body: JSON.stringify(options.body) }),
     });
-  } catch {
-    throw new ApiError("NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o foi possÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel conectar ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  API.");
+  } catch (erro){
+    console.log("URL chamada:", `${getApiUrl()}${path}`);
+    console.log("Erro original:", erro);
+    throw new ApiError("Não foi possível conectar a API.");
   }
 
   const payload = await response.json().catch(() => null);

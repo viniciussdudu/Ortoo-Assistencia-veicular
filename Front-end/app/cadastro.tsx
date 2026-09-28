@@ -1,4 +1,5 @@
 import { Stack, useRouter } from "expo-router";
+import { CardField } from "@stripe/stripe-react-native";
 import React, { useState } from "react";
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
@@ -134,7 +135,7 @@ export default function Cadastro() {
   );
 }
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
@@ -164,6 +165,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     marginBottom: 16,
+  },
+  cardLabel: { fontSize: 14, color: "#666", marginBottom: 8 },
+  cardInput: {
+    width: "100%",
+    height: 52,
+    marginBottom: 16,
+  },
+  cardField: {
+    backgroundColor: "#fff",
+    color : "#111827",
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 8,
   },
   button: {
     backgroundColor: "#2563eb",
