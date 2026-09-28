@@ -1,6 +1,6 @@
 import { ShowAlert } from "@/components/alert";
 import * as Location from "expo-location";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,7 +24,10 @@ const CLIENTE_ID = 1;
 
 export default function SolicitarAssistencia() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [categoriaId, setCategoriaId] = useState<number | null>(null);
+    const params = useLocalSearchParams<{ categoriaId?: string }>();
+  const [categoriaId, setCategoriaId] = useState<number | null>(
+    params.categoriaId ? Number(params.categoriaId) : null,
+  );
   const [descricao, setDescricao] = useState("");
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [carregando, setCarregando] = useState(true);

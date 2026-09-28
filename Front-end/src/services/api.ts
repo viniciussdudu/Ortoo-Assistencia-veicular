@@ -1,7 +1,10 @@
+export type UserType = "CLIENTE" | "PRESTADOR_AUTONOMO" | "EMPRESA";
+
 export type RegisteredUser = {
   id: number;
   nome: string;
   email: string;
+  tipo_usuario: UserType;
 };
 
 export type RegisterInput = {
@@ -9,6 +12,25 @@ export type RegisterInput = {
   email: string;
   password: string;
   documento: string;
+  telefone?: string;
+  tipo_usuario: UserType;
+  nome_fantasia?: string;
+  descricao_empresa?: string;
+  raio_atendimento_km?: number;
+  latitude_atual?: number;
+  longitude_atual?: number;
+};
+
+export type UserProfile = {
+  id: number;
+  nome: string;
+  email: string;
+  telefone: string;
+  documento: string;
+  tipo_documento: "CPF" | "CNPJ";
+  tipo_usuario: UserType;
+  foto_url: string | null;
+  criado_em: string;
 };
 
 export type UserProfile = {
@@ -58,8 +80,8 @@ async function request<T>(
         "Content-Type": "application/json",
       },
       ...(options.body === undefined
-        ? {}
-        : { body: JSON.stringify(options.body) }),
+      ? {}
+      : { body: JSON.stringify(options.body) }),
     });
   } catch (erro){
     console.log("URL chamada:", `${getApiUrl()}${path}`);
@@ -92,7 +114,7 @@ export function login(input: Pick<RegisterInput, "email" | "password">) {
     body: input,
   });
 }
- 
+
 export type RecuperarSenhaInput = {
   email: string;
   novaSenha: string;
@@ -103,7 +125,6 @@ export type RecuperarSenhaResponse = {
   mensagem: string;
 };
 
-// Adicione junto com export function register(...)
 export function recuperarSenha(input: RecuperarSenhaInput) {
   return request<RecuperarSenhaResponse>("/auth/recuperar-senha", {
     method: "POST",
@@ -127,6 +148,27 @@ export type Solicitacao = {
   criado_em: string;
   categoria_nome: string;
 };
+
+export type ServicoOferecido = {
+  id: number;
+  categoria_id: number;
+  categoria_nome: string;
+  preco_base: string;
+};
+
+export type Prestador = {
+  id: number;
+  nome: string;
+  foto_url: string | null;
+  descricao_empresa: string | null;
+  disponivel: boolean;
+  raio_atendimento_km: number;
+  servicos: ServicoOferecido[];
+};
+
+export function listarPrestadores() {
+  return request<Prestador[]>("/prestadores");
+}
 
 export type CriarSolicitacaoInput = {
   cliente_id: number;
