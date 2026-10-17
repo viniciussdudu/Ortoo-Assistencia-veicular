@@ -51,7 +51,8 @@
           "merchantIdentifier": "merchant.com.ortoo.app",
           "enableGooglePay": false
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
