@@ -31,6 +31,7 @@ router.post("/auth/recuperar-senha", authController.recuperarSenha);
 
 // Rotas de Usuário / Perfil
 router.get("/usuario/perfil", userController.getProfile);
+router.put("/usuario/perfil", userController.updateProfile);
 
 // Rotas de Solicitações e Categorias
 router.get("/categorias", solicitacaoController.listarCategorias);
