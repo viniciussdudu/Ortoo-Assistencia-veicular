@@ -28,6 +28,16 @@ export type RegisterInput = {
   longitude_atual?: number;
 };
 
+export type PerfilPrestador = {
+  id: number;
+  nome_fantasia?: string | null;
+  descricao_empresa?: string | null;
+  raio_atendimento_km?: number;
+  disponivel?: boolean;
+  latitude_atual?: number | null;
+  longitude_atual?: number | null;
+};
+
 export type UserProfile = {
   id: number;
   stripe_customer_id?: string | null;
@@ -39,6 +49,21 @@ export type UserProfile = {
   tipo_usuario: UserType;
   foto_url?: string | null;
   criado_em?: string;
+  prestador?: PerfilPrestador | null;
+  veiculo?: { modelo: string; placa: string; cor: string } | null;
+  historico?: Array<{ id: number; data: string; problema: string; status: string }>;
+};
+
+export type UpdateProfileInput = {
+  usuario_id?: number;
+  nome: string;
+  telefone: string;
+  foto_url?: string;
+  // Campos de prestador
+  nome_fantasia?: string;
+  descricao_empresa?: string;
+  raio_atendimento_km?: number;
+  disponivel?: boolean;
 };
 
 export class ApiError extends Error {
@@ -65,7 +90,7 @@ function getApiUrl() {
 }
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
 };
 
@@ -84,8 +109,8 @@ async function request<T>(
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       ...(options.body === undefined
-        ? {}
-        : { body: JSON.stringify(options.body) }),
+      ? {}
+      : { body: JSON.stringify(options.body) }),
     });
   } catch (erro) {
     console.log("URL chamada:", `${getApiUrl()}${path}`);
@@ -140,14 +165,25 @@ export type RecuperarSenhaInput = {
 };
 
 export function recuperarSenha(input: RecuperarSenhaInput) {
-  return request<{ sucesso: boolean; mensagem: string }>("/auth/recuperar-senha", {
-    method: "POST",
-    body: input,
-  });
+  return request<{ sucesso: boolean; mensagem: string }>(
+    "/auth/recuperar-senha",
+    {
+      method: "POST",
+      body: input,
+    },
+  );
 }
 
-export function getUserProfile() {
-  return request<UserProfile>("/usuario/perfil");
+export function getUserProfile(usuarioId?: number) {
+  const query = usuarioId ? `?usuario_id=${usuarioId}` : "";
+  return request<UserProfile>(`/usuario/perfil${query}`);
+}
+
+export function updateUserProfile(input: UpdateProfileInput) {
+  return request<{ sucesso: boolean; mensagem: string }>("/usuario/perfil", {
+    method: "PUT",
+    body: input,
+  });
 }
 
 export async function logout(): Promise<{ sucesso: boolean }> {
@@ -185,6 +221,7 @@ export type ServicoOferecido = {
 export type Prestador = {
   id: number;
   usuario_id: number;
+  nome?: string;
   nome_fantasia?: string | null;
   descricao_empresa?: string | null;
   raio_atendimento_km: number;
@@ -200,25 +237,32 @@ export function listarPrestadores() {
 
 /* ==================== SOLICITAÇÕES ==================== */
 
-export type StatusSolicitacao =
+export type SolicitacaoStatus =
   | "PENDENTE"
   | "ACEITO"
+  | "A_CAMINHO"
   | "EM_ANDAMENTO"
   | "CONCLUIDO"
   | "CANCELADO";
+
+// Alias para manter compatibilidade com códigos antigos que importem StatusSolicitacao
+export type StatusSolicitacao = SolicitacaoStatus;
 
 export type Solicitacao = {
   id: number;
   cliente_id: number;
   prestador_id?: number | null;
-  categoria_id: number;
-  status: StatusSolicitacao;
+  categoria_id?: number;
+  status: SolicitacaoStatus;
   descricao_problema?: string | null;
   latitude_origem: number | string;
   longitude_origem: number | string;
   valor_estimado?: number | string | null;
   criado_em: string;
   categoria_nome?: string;
+  cliente_nome?: string;
+  cliente_telefone?: string;
+  prestador_nome?: string;
 };
 
 export type CriarSolicitacaoInput = {
@@ -239,10 +283,31 @@ export function listarMinhasSolicitacoes(clienteId: number) {
 }
 
 export function cancelarSolicitacao(id: number) {
-  // Ajustado para PATCH na rota individual por ID
   return request<{ sucesso: boolean; mensagem: string }>(
     `/solicitacoes/${id}/cancelar`,
-    { method: "PATCH" }
+    { method: "PATCH" },
+  );
+}
+
+export function listarSolicitacoesPendentes() {
+  return request<Solicitacao[]>("/solicitacoes/pendentes");
+}
+
+export function buscarSolicitacaoPorId(id: number) {
+  return request<Solicitacao>(`/solicitacoes/${id}`);
+}
+
+export function atualizarStatusSolicitacao(
+  id: number,
+  status: SolicitacaoStatus,
+  prestador_id?: number,
+) {
+  return request<{ sucesso: boolean; status: string }>(
+    `/solicitacoes/${id}/status`,
+    {
+      method: "PATCH",
+      body: { status, prestador_id },
+    },
   );
 }
 
