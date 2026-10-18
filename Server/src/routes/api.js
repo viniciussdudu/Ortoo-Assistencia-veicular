@@ -39,6 +39,11 @@ router.post("/solicitacoes", solicitacaoController.criarSolicitacao);
 router.get("/solicitacoes", solicitacaoController.listarSolicitacoesCliente);
 router.patch("/solicitacoes/:id/cancelar", solicitacaoController.cancelarSolicitacao);
 
+// Rotas de acompanhamento de solicitações
+router.get("/solicitacoes/pendentes", solicitacaoController.listarPendentes);
+router.get("/solicitacoes/:id", solicitacaoController.buscarPorId);
+router.patch("/solicitacoes/:id/status", solicitacaoController.atualizarStatus);
+
 // Rota para cancelar solicitações pendentes por cliente_id via POST
 router.post("/solicitacoes/cancelar", async (req, res) => {
   const { cliente_id } = req.body;
