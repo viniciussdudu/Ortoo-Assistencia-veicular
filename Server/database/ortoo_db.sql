@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS cartoes_usuario (
     validade_mes TINYINT,
     validade_ano SMALLINT,
     apelido VARCHAR(50),
-    principal BOOLEAN DEFAULT FALSE,
+    principal BOOLEAN DEFAULT TRUE,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
