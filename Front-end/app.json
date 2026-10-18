@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "Ortoo",
+    "owner": "suaresexpo",
     "slug": "Ortoo",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,6 +13,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.suaresexpo.ortoo",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -19,7 +21,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -56,6 +62,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "364f941b-4114-420e-a8d7-40668ac8219d"
+      }
     }
   }
 }

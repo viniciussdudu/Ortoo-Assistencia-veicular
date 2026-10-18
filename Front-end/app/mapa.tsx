@@ -14,8 +14,8 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import MapaTempoReal from "../components/(componentes-mapas)/MapaTempoReal";
 import { ShowAlert } from "@/components/alert";
+import MapaTempoReal from "../components/(componentes-mapas)/MapaTempoReal";
 
 // Importações centralizadas do arquivo de serviços
 import {
@@ -307,7 +307,10 @@ export default function TelaMapa() {
       const response = await fetch(`${API_URL}/pagamento/transacoes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ solicitacao_id: solicitacaoId }),
+        body: JSON.stringify({ 
+          solicitacao_id: solicitacaoId,  
+          usuario_id: CLIENTE_ID,
+        })
       });
       const transacao = await response.json();
 
