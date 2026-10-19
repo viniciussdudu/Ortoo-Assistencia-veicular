@@ -1,3 +1,5 @@
+import { limparToken, obterToken, salvarToken } from "./session";
+
 export type UserType = "CLIENTE" | "PRESTADOR_AUTONOMO" | "EMPRESA";
 export type TipoDocumento = "CPF" | "CNPJ";
 
@@ -11,20 +13,6 @@ export type RegisteredUser = {
   stripe_customer_id?: string | null;
   token?: string;
 };
-
-let usuarioAtual: RegisteredUser | null = null;
-
-export function definirUsuarioAtual(usuario: RegisteredUser) {
-  usuarioAtual = usuario;
-}
-
-export function obterUsuarioAtual() {
-  return usuarioAtual;
-}
-
-export function limparUsuarioAtual() {
-  usuarioAtual = null;
-}
 
 export type RegisterInput = {
   nome: string;
@@ -40,6 +28,16 @@ export type RegisterInput = {
   longitude_atual?: number;
 };
 
+export type PerfilPrestador = {
+  id: number;
+  nome_fantasia?: string | null;
+  descricao_empresa?: string | null;
+  raio_atendimento_km?: number;
+  disponivel?: boolean;
+  latitude_atual?: number | null;
+  longitude_atual?: number | null;
+};
+
 export type UserProfile = {
   id: number;
   stripe_customer_id?: string | null;
@@ -51,6 +49,21 @@ export type UserProfile = {
   tipo_usuario: UserType;
   foto_url?: string | null;
   criado_em?: string;
+  prestador?: PerfilPrestador | null;
+  veiculo?: { modelo: string; placa: string; cor: string } | null;
+  historico?: Array<{ id: number; data: string; problema: string; status: string }>;
+};
+
+export type UpdateProfileInput = {
+  usuario_id?: number;
+  nome: string;
+  telefone: string;
+  foto_url?: string;
+  // Campos de prestador
+  nome_fantasia?: string;
+  descricao_empresa?: string;
+  raio_atendimento_km?: number;
+  disponivel?: boolean;
 };
 
 export class ApiError extends Error {
@@ -63,7 +76,6 @@ export class ApiError extends Error {
   }
 }
 
-// No Expo Go, localhost é o próprio celular, não o computador que executa a API.
 const apiUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
 
 function getApiUrl() {
@@ -76,7 +88,7 @@ function getApiUrl() {
 }
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
 };
 
@@ -85,26 +97,30 @@ async function request<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   let response: Response;
+  const token = await obterToken();
 
   try {
     response = await fetch(`${getApiUrl()}${path}`, {
       method: options.method ?? "GET",
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       ...(options.body === undefined
-        ? {}
-        : { body: JSON.stringify(options.body) }),
+      ? {}
+      : { body: JSON.stringify(options.body) }),
     });
   } catch {
-    throw new ApiError(
-      "Não foi possível conectar à API. Verifique se o servidor está em execução e se o celular está na mesma rede Wi-Fi.",
-    );
+    throw new ApiError("Não foi possível conectar à API. Verifique se o servidor está em execução e se o celular está na mesma rede Wi-Fi.");
   }
 
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
+    // Token enviado e recusado (expirado/inválido): descarta a credencial.
+    if (response.status === 401 && token && path !== "/auth/login") {
+      await limparToken();
+    }
     throw new ApiError(
       payload?.erro ?? "A API retornou um erro.",
       response.status,
@@ -123,11 +139,20 @@ export function register(input: RegisterInput) {
   });
 }
 
-export function login(input: Pick<RegisterInput, "email" | "password">): Promise<RegisteredUser> {
-  return request<RegisteredUser>("/auth/login", {
+export async function login(
+  input: Pick<RegisterInput, "email" | "password">,
+): Promise<RegisteredUser> {
+  const usuario = await request<RegisteredUser>("/auth/login", {
     method: "POST",
     body: input,
   });
+
+  if (!usuario.token) {
+    throw new ApiError("A API não retornou a credencial de acesso.");
+  }
+
+  await salvarToken(usuario.token);
+  return usuario;
 }
 
 export type RecuperarSenhaInput = {
@@ -136,20 +161,36 @@ export type RecuperarSenhaInput = {
 };
 
 export function recuperarSenha(input: RecuperarSenhaInput) {
-  return request<{ sucesso: boolean; mensagem: string }>("/auth/recuperar-senha", {
-    method: "POST",
+  return request<{ sucesso: boolean; mensagem: string }>(
+    "/auth/recuperar-senha",
+    {
+      method: "POST",
+      body: input,
+    },
+  );
+}
+
+export function getUserProfile(usuarioId?: number) {
+  const query = usuarioId ? `?usuario_id=${usuarioId}` : "";
+  return request<UserProfile>(`/usuario/perfil${query}`);
+}
+
+export function updateUserProfile(input: UpdateProfileInput) {
+  return request<{ sucesso: boolean; mensagem: string }>("/usuario/perfil", {
+    method: "PUT",
     body: input,
   });
 }
 
-export function getUserProfile(usuarioId: number) {
-  return request<UserProfile>(`/usuario/perfil?usuario_id=${encodeURIComponent(usuarioId)}`);
-}
-
-export function logout() {
-  return request<{ sucesso: boolean }>("/auth/logout", { method: "POST" }).finally(
-    limparUsuarioAtual,
-  );
+export async function logout(): Promise<{ sucesso: boolean }> {
+  try {
+    await request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
+  } catch {
+    // Mesmo sem rede, a sessão local precisa ser encerrada.
+  } finally {
+    await limparToken();
+  }
+  return { sucesso: true };
 }
 
 /* ==================== CATEGORIAS & PRESTADORES ==================== */
@@ -176,6 +217,7 @@ export type ServicoOferecido = {
 export type Prestador = {
   id: number;
   usuario_id: number;
+  nome?: string;
   nome_fantasia?: string | null;
   descricao_empresa?: string | null;
   raio_atendimento_km: number;
@@ -189,31 +231,34 @@ export function listarPrestadores() {
   return request<Prestador[]>("/prestadores");
 }
 
-export function listarPrestadoresPorCategoria(categoriaId: number) {
-  return request<Prestador[]>(`/prestadores/categoria/${encodeURIComponent(categoriaId)}`);
-}
-
 /* ==================== SOLICITAÇÕES ==================== */
 
-export type StatusSolicitacao =
+export type SolicitacaoStatus =
   | "PENDENTE"
   | "ACEITO"
+  | "A_CAMINHO"
   | "EM_ANDAMENTO"
   | "CONCLUIDO"
   | "CANCELADO";
+
+// Alias para manter compatibilidade com códigos antigos que importem StatusSolicitacao
+export type StatusSolicitacao = SolicitacaoStatus;
 
 export type Solicitacao = {
   id: number;
   cliente_id: number;
   prestador_id?: number | null;
-  categoria_id: number;
-  status: StatusSolicitacao;
+  categoria_id?: number;
+  status: SolicitacaoStatus;
   descricao_problema?: string | null;
   latitude_origem: number | string;
   longitude_origem: number | string;
   valor_estimado?: number | string | null;
   criado_em: string;
   categoria_nome?: string;
+  cliente_nome?: string;
+  cliente_telefone?: string;
+  prestador_nome?: string;
 };
 
 export type CriarSolicitacaoInput = {
@@ -234,10 +279,31 @@ export function listarMinhasSolicitacoes(clienteId: number) {
 }
 
 export function cancelarSolicitacao(id: number) {
-  // Ajustado para PATCH na rota individual por ID
   return request<{ sucesso: boolean; mensagem: string }>(
     `/solicitacoes/${id}/cancelar`,
-    { method: "PATCH" }
+    { method: "PATCH" },
+  );
+}
+
+export function listarSolicitacoesPendentes() {
+  return request<Solicitacao[]>("/solicitacoes/pendentes");
+}
+
+export function buscarSolicitacaoPorId(id: number) {
+  return request<Solicitacao>(`/solicitacoes/${id}`);
+}
+
+export function atualizarStatusSolicitacao(
+  id: number,
+  status: SolicitacaoStatus,
+  prestador_id?: number,
+) {
+  return request<{ sucesso: boolean; status: string }>(
+    `/solicitacoes/${id}/status`,
+    {
+      method: "PATCH",
+      body: { status, prestador_id },
+    },
   );
 }
 
@@ -259,7 +325,7 @@ export type CartaoUsuario = {
 
 export type SalvarCartaoInput = {
   usuario_id: number;
-  payment_method_id: string;
+  setup_intent_id: string;
   ultimos_digitos?: string;
   bandeira?: string;
   validade_mes?: number;
@@ -269,7 +335,7 @@ export type SalvarCartaoInput = {
 };
 
 export function criarSetupIntentCartao(usuarioId: number) {
-  return request<{ client_secret: string }>("/pagamento/novo-cartao", {
+  return request<{ client_secret: string; setup_intent_id: string }>("/pagamento/novo-cartao", {
     method: "POST",
     body: { usuario_id: usuarioId },
   });
@@ -289,16 +355,65 @@ export function listarCartoes(usuarioId: number) {
   return request<CartaoUsuario[]>(`/pagamento/cartoes?usuario_id=${encodeURIComponent(usuarioId)}`);
 }
 
-export function cobrarCartao(input: { transacao_id: number; metodo_pagamento: string }) {
-  return request<{ sucesso: boolean; mensagem?: string }>("/pagamento/cobrar", {
-    method: "POST",
-    body: input,
-  });
+export type TipoVeiculo = "CARRO" | "MOTO" | "BICICLETA" | "BIKE_ELETRICA" | "CAMINHAO";
+
+export type Veiculo = {
+  id: number;
+  tipo: TipoVeiculo;
+  marca: string | null;
+  modelo: string;
+  ano: number | null;
+  placa: string | null;
+  cor: string | null;
+  km_atual: number;
+  km_atualizado_em: string;
+};
+
+export type Manutencao = {
+  id: number;
+  tipo: string;
+  descricao: string | null;
+  km_na_execucao: number | null;
+  custo: string | null;
+  executado_em: string;
+};
+
+export type VeiculoDetalhado = Veiculo & { manutencoes: Manutencao[] };
+
+export function listarVeiculos(usuarioId: number) {
+  return request<Veiculo[]>(`/veiculos?usuario_id=${usuarioId}`);
 }
 
-export function criarTransacao(solicitacaoId: number) {
-  return request<{ id: number; solicitacao_id: number; valor: number | string; status: string }>(
-    "/pagamento/transacoes",
-    { method: "POST", body: { solicitacao_id: solicitacaoId } },
+export function obterVeiculo(id: number) {
+  return request<VeiculoDetalhado>(`/veiculos/${id}`);
+}
+
+export function criarVeiculo(input: {
+  usuario_id: number;
+  tipo?: TipoVeiculo;
+  marca?: string;
+  modelo: string;
+  ano?: number;
+  placa?: string;
+  cor?: string;
+  km_atual?: number;
+}) {
+  return request<Veiculo>("/veiculos", { method: "POST", body: input });
+}
+
+export function atualizarQuilometragem(id: number, km_atual: number) {
+  return request<{ sucesso: boolean; km_atual: number }>(
+    `/veiculos/${id}/quilometragem`,
+    { method: "PATCH", body: { km_atual } },
   );
+}
+
+// O backend descobre o prestador pelo token; o app não envia prestador_id.
+export type CadastrarServicoInput = {
+  categoria_id: number;
+  preco_base: number;
+};
+
+export function cadastrarServico(input: CadastrarServicoInput) {
+  return request<ServicoOferecido>("/servicos", { method: "POST", body: input });
 }

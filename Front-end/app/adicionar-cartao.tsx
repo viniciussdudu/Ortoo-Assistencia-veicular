@@ -1,174 +1,89 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
-import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { ApiError, obterUsuarioAtual, salvarCartao } from "../src/services/api";
+import { useStripe } from "@stripe/stripe-react-native";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function AdicionarCartao() {
+const CLIENTE_ID = 1; // TODO: usuário logado
+const API_URL = (process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
+
+export default function AdicionarCartaoForm() {
   const router = useRouter();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const [carregando, setCarregando] = useState(false);
 
-  const [numero, setNumero] = useState("");
-  const [nome, setNome] = useState("");
-  const [validade, setValidade] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [salvando, setSalvando] = useState(false);
-
-  // Formata o número do cartão com espaços
-  const handleNumeroChange = (text: string) => {
-    const limpo = text.replace(/\D/g, "");
-    const formatado = limpo.replace(/(\d{4})/g, "$1 ").trim();
-    setNumero(formatado.slice(0, 19));
-  };
-
-  // Formata a validade no formato MM/AA
-  const handleValidadeChange = (text: string) => {
-    const limpo = text.replace(/\D/g, "");
-    if (limpo.length >= 3) {
-      setValidade(`${limpo.slice(0, 2)}/${limpo.slice(2, 4)}`);
-    } else {
-      setValidade(limpo);
-    }
-  };
-
-  async function handleSalvarCartao() {
-    if (!numero || !nome || !validade || !cvv) {
-      Alert.alert("Atenção", "Por favor, preencha todos os campos do cartão.");
-      return;
-    }
-
-    const [mes, ano] = validade.split("/");
-    const ultimosDigitos = numero.replace(/\s/g, "").slice(-4);
-
-    setSalvando(true);
-
+  async function adicionarCartao() {
+    setCarregando(true);
     try {
-      const usuario = obterUsuarioAtual();
-      if (!usuario) {
-        throw new ApiError("Sua sessão expirou. Entre novamente para adicionar um cartão.");
-      }
-      await salvarCartao({
-        usuario_id: usuario.id,
-        payment_method_id: `pm_simulated_${Date.now()}`,
-        ultimos_digitos: ultimosDigitos || "4242",
-        bandeira: "Visa",
-        validade_mes: Number(mes) || 12,
-        validade_ano: Number(`20${ano}`) || 2028,
+      // Para criar o novo cartão no Stripe
+      const r1 = await fetch(`${API_URL}/pagamento/novo-cartao`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario_id: CLIENTE_ID }),
       });
-      Alert.alert("Sucesso", "Cartão adicionado com sucesso!", [
+      const d1 = await r1.json();
+      if (!r1.ok) throw new Error(d1.erro || "Erro ao iniciar cadastro.");
+
+      // Folha pré pronta recomendada pelo Stripe
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: "Ortoo",
+        setupIntentClientSecret: d1.client_secret,
+        returnURL: "ortoo://stripe-redirect",
+        allowsDelayedPaymentMethods: false,
+        appearance: {
+          colors: {
+            primary: "#1E90FF",
+            background: "#FFFFFF",
+            componentBackground: "#F5F7FA",
+            componentBorder: "#E0E4EA",
+            componentText: "#111111",
+            primaryText: "#111111",
+            secondaryText: "#6B7280",
+            placeholderText: "#9CA3AF",
+          },
+          shapes: { borderRadius: 12, borderWidth: 1 },
+          primaryButton: { shapes: { borderRadius: 12 } },
+        },
+      });
+      if (initError) throw new Error(initError.message);
+
+      // Abre a folha
+      const { error } = await presentPaymentSheet();
+      if (error) {
+        if (error.code !== "Canceled") Alert.alert("Erro", error.message);
+        return;
+      }
+
+      // Backend salva
+      const r2 = await fetch(`${API_URL}/pagamento/salvar-cartao`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuario_id: CLIENTE_ID,
+          setup_intent_id: d1.setup_intent_id,
+        }),
+      });
+      const d2 = await r2.json();
+      if (!r2.ok) throw new Error(d2.erro || "Não foi possível salvar o cartão.");
+
+      Alert.alert("Sucesso", "Cartão adicionado!", [
         { text: "OK", onPress: () => router.back() },
       ]);
-    } catch (error) {
-      Alert.alert("Erro", error instanceof ApiError ? error.message : "Não foi possível salvar o cartão.");
+    } catch (e) {
+      Alert.alert("Erro", e instanceof Error ? e.message : "Tente novamente.");
     } finally {
-      setSalvando(false);
+      setCarregando(false);
     }
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
+    <View style={styles.container}>
+      <Text style={styles.titulo}>Novo cartão</Text>
+      <Text style={styles.subtitulo}>Insira os dados do cartão para salvar no seu perfil</Text>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.scroll}>
-          {/* Botão Voltar */}
-          <TouchableOpacity style={styles.botaoVoltar} onPress={() => router.back()}>
-            <MaterialCommunityIcons name="arrow-left" size={20} color="#ffffff" />
-            <Text style={styles.voltarTexto}>Voltar</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.titulo}>Novo Cartão</Text>
-          <Text style={styles.subtitulo}>
-            Insira os dados do cartão para salvar no seu perfil.
-          </Text>
-
-          {/* Form Número */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Número do Cartão</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0000 0000 0000 0000"
-              placeholderTextColor="#6b7280"
-              keyboardType="number-pad"
-              maxLength={19}
-              value={numero}
-              onChangeText={handleNumeroChange}
-            />
-          </View>
-
-          {/* Form Nome */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Nome Impresso no Cartão</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="João Silva"
-              placeholderTextColor="#6b7280"
-              autoCapitalize="characters"
-              value={nome}
-              onChangeText={setNome}
-            />
-          </View>
-
-          {/* Row Validade e CVV */}
-          <View style={styles.row}>
-            <View style={[styles.formGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Validade (MM/AA)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="12/28"
-                placeholderTextColor="#6b7280"
-                keyboardType="number-pad"
-                maxLength={5}
-                value={validade}
-                onChangeText={handleValidadeChange}
-              />
-            </View>
-
-            <View style={[styles.formGroup, { flex: 1 }]}>
-              <Text style={styles.label}>CVV</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="123"
-                placeholderTextColor="#6b7280"
-                keyboardType="number-pad"
-                maxLength={4}
-                secureTextEntry
-                value={cvv}
-                onChangeText={setCvv}
-              />
-            </View>
-          </View>
-
-          {/* Botão Salvar */}
-          <TouchableOpacity
-            style={[styles.botaoSalvar, salvando && styles.botaoDisabled]}
-            onPress={handleSalvarCartao}
-            disabled={salvando}
-            activeOpacity={0.8}
-          >
-            {salvando ? (
-              <ActivityIndicator color="#ffffff" size="small" />
-            ) : (
-              <Text style={styles.botaoSalvarTexto}>Salvar Cartão</Text>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <TouchableOpacity style={styles.botaoSalvar} onPress={adicionarCartao} disabled={carregando}>
+        {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.botaoSalvarTexto}>Salvar cartão</Text>}
+      </TouchableOpacity>
+    </View>
   );
 }
 

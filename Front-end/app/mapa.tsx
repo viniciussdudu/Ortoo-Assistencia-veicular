@@ -14,23 +14,22 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import MapaTempoReal from "../components/(componentes-mapas)/MapaTempoReal";
 import { ShowAlert } from "@/components/alert";
+import MapaTempoReal from "../components/(componentes-mapas)/MapaTempoReal";
 
 // Importações centralizadas do arquivo de serviços
 import {
-  ApiError,
   cancelarSolicitacao,
   CartaoUsuario,
-  cobrarCartao,
   criarSolicitacao,
-  criarTransacao,
   listarCartoes,
   listarMinhasSolicitacoes,
-  listarPrestadoresPorCategoria,
-  obterUsuarioAtual,
   Prestador,
 } from "../src/services/api";
+
+// TODO: substituir pelo ID do usuário logado na sessão real
+const CLIENTE_ID = 1;
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api";
 
 export default function TelaMapa() {
   const router = useRouter();
@@ -145,16 +144,19 @@ export default function TelaMapa() {
 
       try {
         setCarregandoPrestadores(true);
-        const data = await listarPrestadoresPorCategoria(Number(categoria_id));
-        setPrestadores(data);
-        if (data.length > 0) {
-          setPrestadorSelecionado(data[0]);
+        const response = await fetch(`${API_URL}/prestadores/categoria/${categoria_id}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          setPrestadores(data);
+          if (data.length > 0) {
+            setPrestadorSelecionado(data[0]);
+          }
+        } else {
+          Alert.alert("Erro", data.erro || "Falha ao buscar prestadores disponíveis.");
         }
       } catch (error) {
-        Alert.alert(
-          "Erro",
-          error instanceof ApiError ? error.message : "Falha ao buscar prestadores disponíveis.",
-        );
+        console.error("Erro ao buscar prestadores:", error);
       } finally {
         setCarregandoPrestadores(false);
       }
@@ -177,7 +179,7 @@ export default function TelaMapa() {
     return {
       latitude: lat,
       longitude: lng,
-      heading: 0,
+      headin: 0,
     };
   }, [prestadorSelecionado?.latitude_atual, prestadorSelecionado?.longitude_atual]);
 
@@ -203,9 +205,7 @@ export default function TelaMapa() {
     async function buscarCartoes() {
       try {
         setCarregandoCartoes(true);
-        const usuario = obterUsuarioAtual();
-        if (!usuario) return;
-        const data = await listarCartoes(usuario.id);
+        const data = await listarCartoes(CLIENTE_ID);
         setCartoes(data);
       } catch (error) {
         console.error("Erro ao buscar cartões:", error);
@@ -219,7 +219,19 @@ export default function TelaMapa() {
 
   // Envia a cobrança incluindo o método de pagamento selecionado
   async function realizarPagamento(transacaoId: number, metodo: string) {
-    await cobrarCartao({ transacao_id: transacaoId, metodo_pagamento: metodo });
+    const response = await fetch(`${API_URL}/pagamento/cobrar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        transacao_id: transacaoId,
+        metodo_pagamento: metodo,
+      }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.erro || "Não foi possível realizar o pagamento.");
+    }
   }
 
   // Função disparada ao clicar no botão 'Chamar'
@@ -235,13 +247,9 @@ export default function TelaMapa() {
     }
 
     try {
-      const usuario = obterUsuarioAtual();
-      if (!usuario) {
-        throw new ApiError("Sua sessão expirou. Entre novamente para solicitar assistência.");
-      }
       // 1. Tenta criar uma nova solicitação no backend
       const novaSolicitacao = await criarSolicitacao({
-        cliente_id: usuario.id,
+        cliente_id: CLIENTE_ID,
         categoria_id: Number(categoria_id) || 1,
         latitude_origem: clienteCoords.latitude,
         longitude_origem: clienteCoords.longitude,
@@ -260,9 +268,7 @@ export default function TelaMapa() {
         error?.message?.includes("já possui")
       ) {
         try {
-          const usuario = obterUsuarioAtual();
-          if (!usuario) throw new ApiError("Sua sessão expirou.");
-          const solicitacoes = await listarMinhasSolicitacoes(usuario.id);
+          const solicitacoes = await listarMinhasSolicitacoes(CLIENTE_ID);
 
           const ativa = solicitacoes.find(
             (s) =>
@@ -298,7 +304,19 @@ export default function TelaMapa() {
     setProcessandoPagamento(true);
 
     try {
-      const transacao = await criarTransacao(solicitacaoId);
+      const response = await fetch(`${API_URL}/pagamento/transacoes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          solicitacao_id: solicitacaoId,
+          usuario_id: CLIENTE_ID,
+        })
+      });
+      const transacao = await response.json();
+
+      if (!response.ok) {
+        throw new Error(transacao.erro || "Não foi possível criar a transação.");
+      }
 
       await realizarPagamento(transacao.id, metodo);
       setMostrarPagamentos(false);

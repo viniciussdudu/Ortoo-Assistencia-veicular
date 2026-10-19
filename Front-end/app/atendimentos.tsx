@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ApiError, cancelarSolicitacao, listarMinhasSolicitacoes, obterUsuarioAtual, Solicitacao } from "../src/services/api";
+import { ApiError, cancelarSolicitacao, getUserProfile, listarMinhasSolicitacoes, Solicitacao } from "../src/services/api";
 
 const STATUS: Record<Solicitacao["status"], string> = {
-  PENDENTE: "Pendente", ACEITO: "Aceito", EM_ANDAMENTO: "Em andamento", CONCLUIDO: "Concluído", CANCELADO: "Cancelado",
+  PENDENTE: "Pendente", ACEITO: "Aceito", A_CAMINHO: "A caminho", EM_ANDAMENTO: "Em andamento", CONCLUIDO: "Concluído", CANCELADO: "Cancelado",
 };
 
 function formatarData(data: string) {
@@ -26,8 +26,7 @@ export default function Atendimentos() {
     pullToRefresh ? setAtualizando(true) : setCarregando(true);
     try {
       setErro(null);
-      const usuario = obterUsuarioAtual();
-      if (!usuario) throw new ApiError("Sua sessão expirou. Entre novamente para ver seus atendimentos.");
+      const usuario = await getUserProfile();
       setAtendimentos(await listarMinhasSolicitacoes(usuario.id));
     } catch (error) {
       setErro(error instanceof ApiError ? error.message : "Não foi possível carregar os atendimentos.");

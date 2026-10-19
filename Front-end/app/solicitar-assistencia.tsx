@@ -16,8 +16,8 @@ import {
   ApiError,
   Categoria,
   criarSolicitacao,
+  getUserProfile,
   listarCategorias,
-  obterUsuarioAtual,
 } from "../src/services/api";
 
 export default function SolicitarAssistencia() {
@@ -77,10 +77,7 @@ export default function SolicitarAssistencia() {
 
     setEnviando(true);
     try {
-      const usuario = obterUsuarioAtual();
-      if (!usuario) {
-        throw new ApiError("Sua sessão expirou. Entre novamente para solicitar assistência.");
-      }
+      const usuario = await getUserProfile();
       await criarSolicitacao({
         cliente_id: usuario.id,
         categoria_id: categoriaId,

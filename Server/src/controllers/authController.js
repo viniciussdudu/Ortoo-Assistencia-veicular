@@ -1,5 +1,8 @@
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const db = require("../config/db");
+const { secret, expiresIn } = require("../config/jwt");
+const { errors } = require("../config/stripe");
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -14,6 +17,7 @@ function isValidCpf(cpf) {
     const remainder = (sum * 10) % 11;
     return remainder === 10 ? 0 : remainder;
   };
+
 
   return (
     calculateDigit(cpf.slice(0, 9), 10) === Number(cpf[9]) &&
@@ -186,11 +190,18 @@ async function login(req, res, next) {
       return res.status(401).json({ erro: "Senha ou e-mail inválido." });
     }
 
+    const token = jwt.sign({}, secret, {
+      subject: String(user.id),
+      expiresIn,
+      algorithm: "HS256",
+    });
+
     return res.json({
       id: user.id,
       nome: user.nome,
       email: user.email,
       tipo_usuario: user.tipo_usuario,
+      token,
     });
   } catch (error) {
     return next(error);

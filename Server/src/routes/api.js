@@ -1,11 +1,13 @@
 const express = require("express");
 const db = require("../config/db");
+const { requireAuth } = require("../middlewares/auth");
 
 const prestadorController = require("../controllers/prestadorControllers");
 const authController = require("../controllers/authController");
 const userController = require("../controllers/userController");
 const solicitacaoController = require("../controllers/solicitacaoController");
 const paymentController = require("../controllers/paymentController");
+const veiculoController = require("../controllers/veiculoController");
 
 const router = express.Router();
 
@@ -30,13 +32,18 @@ router.post("/auth/logout", authController.logout);
 router.post("/auth/recuperar-senha", authController.recuperarSenha);
 
 // Rotas de Usuário / Perfil
-router.get("/usuario/perfil", userController.getProfile);
+router.get("/usuario/perfil", requireAuth, userController.getProfile);
 
 // Rotas de Solicitações e Categorias
 router.get("/categorias", solicitacaoController.listarCategorias);
 router.post("/solicitacoes", solicitacaoController.criarSolicitacao);
 router.get("/solicitacoes", solicitacaoController.listarSolicitacoesCliente);
 router.patch("/solicitacoes/:id/cancelar", solicitacaoController.cancelarSolicitacao);
+
+// Rotas de acompanhamento de solicitações
+router.get("/solicitacoes/pendentes", solicitacaoController.listarPendentes);
+router.get("/solicitacoes/:id", solicitacaoController.buscarPorId);
+router.patch("/solicitacoes/:id/status", solicitacaoController.atualizarStatus);
 
 // Rota para cancelar solicitações pendentes por cliente_id via POST
 router.post("/solicitacoes/cancelar", async (req, res) => {
@@ -59,6 +66,7 @@ router.post("/solicitacoes/cancelar", async (req, res) => {
 
 // Rotas de Prestadores
 router.get("/prestadores", prestadorController.listarPrestadores);
+router.post("/servicos", requireAuth, prestadorController.cadastrarServico);
 
 // Rota para listar prestadores por categoria de serviço
 router.get("/prestadores/categoria/:categoria_id", async (req, res) => {
@@ -101,5 +109,12 @@ router.get("/pagamento/cartoes", paymentController.listarCartoes);
 router.post("/pagamento/solicitar-transacao", paymentController.criarTransacao);
 router.post("/pagamento/transacoes", paymentController.criarTransacao); // Alias para suportar ambas as chamadas
 router.post("/pagamento/cobrar", paymentController.cobrarCartao);
+
+//cadastro de veiculo
+router.get("/veiculos", veiculoController.listarVeiculos);
+router.post("/veiculos", veiculoController.criarVeiculo);
+router.get("/veiculos/:id", veiculoController.obterVeiculo);
+router.patch("/veiculos/:id/quilometragem", veiculoController.atualizarQuilometragem);
+router.post("/veiculos/:id/manutencoes", veiculoController.registrarManutencao);
 
 module.exports = router;
