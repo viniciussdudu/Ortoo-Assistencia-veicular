@@ -6,6 +6,7 @@ const authController = require("../controllers/authController");
 const userController = require("../controllers/userController");
 const solicitacaoController = require("../controllers/solicitacaoController");
 const paymentController = require("../controllers/paymentController");
+const veiculoController = require("../controllers/veiculoController");
 
 const router = express.Router();
 
@@ -108,5 +109,12 @@ router.get("/pagamento/cartoes", paymentController.listarCartoes);
 router.post("/pagamento/solicitar-transacao", paymentController.criarTransacao);
 router.post("/pagamento/transacoes", paymentController.criarTransacao); // Alias para suportar ambas as chamadas
 router.post("/pagamento/cobrar", paymentController.cobrarCartao);
+
+//cadastro de veiculo
+router.get("/veiculos", veiculoController.listarVeiculos);
+router.post("/veiculos", veiculoController.criarVeiculo);
+router.get("/veiculos/:id", veiculoController.obterVeiculo);
+router.patch("/veiculos/:id/quilometragem", veiculoController.atualizarQuilometragem);
+router.post("/veiculos/:id/manutencoes", veiculoController.registrarManutencao);
 
 module.exports = router;

@@ -336,3 +336,56 @@ export function salvarCartao(input: SalvarCartaoInput) {
 export function listarCartoes(usuarioId: number) {
   return request<CartaoUsuario[]>(`/pagamento/cartoes?usuario_id=${usuarioId}`);
 }
+
+export type TipoVeiculo = "CARRO" | "MOTO" | "BICICLETA" | "BIKE_ELETRICA" | "CAMINHAO";
+
+export type Veiculo = {
+  id: number;
+  tipo: TipoVeiculo;
+  marca: string | null;
+  modelo: string;
+  ano: number | null;
+  placa: string | null;
+  cor: string | null;
+  km_atual: number;
+  km_atualizado_em: string;
+};
+
+export type Manutencao = {
+  id: number;
+  tipo: string;
+  descricao: string | null;
+  km_na_execucao: number | null;
+  custo: string | null;
+  executado_em: string;
+};
+
+export type VeiculoDetalhado = Veiculo & { manutencoes: Manutencao[] };
+
+export function listarVeiculos(usuarioId: number) {
+  return request<Veiculo[]>(`/veiculos?usuario_id=${usuarioId}`);
+}
+
+export function obterVeiculo(id: number) {
+  return request<VeiculoDetalhado>(`/veiculos/${id}`);
+}
+
+export function criarVeiculo(input: {
+  usuario_id: number;
+  tipo?: TipoVeiculo;
+  marca?: string;
+  modelo: string;
+  ano?: number;
+  placa?: string;
+  cor?: string;
+  km_atual?: number;
+}) {
+  return request<Veiculo>("/veiculos", { method: "POST", body: input });
+}
+
+export function atualizarQuilometragem(id: number, km_atual: number) {
+  return request<{ sucesso: boolean; km_atual: number }>(
+    `/veiculos/${id}/quilometragem`,
+    { method: "PATCH", body: { km_atual } },
+  );
+}
