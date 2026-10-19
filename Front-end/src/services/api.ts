@@ -4,6 +4,20 @@ export type RegisteredUser = {
   email: string;
 };
 
+let usuarioAtual: RegisteredUser | null = null;
+
+export function definirUsuarioAtual(usuario: RegisteredUser) {
+  usuarioAtual = usuario;
+}
+
+export function obterUsuarioAtual() {
+  return usuarioAtual;
+}
+
+export function limparUsuarioAtual() {
+  usuarioAtual = null;
+}
+
 export type UserProfile = {
   usuario: RegisteredUser;
   veiculo: { modelo: string; placa: string; cor: string } | null;
@@ -27,15 +41,14 @@ export class ApiError extends Error {
   }
 }
 
-// FALLBACK: Garante a URL local caso a variável de ambiente não esteja definida
-const apiUrl = (
-  process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api"
-).replace(/\/$/, "");
+// No Expo Go, "localhost" aponta para o próprio celular, e não para o computador
+// que executa a API. A URL deve ser configurada em EXPO_PUBLIC_API_URL.
+const apiUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
 
 function getApiUrl() {
   if (!apiUrl) {
     throw new ApiError(
-      "A API nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o foi configurada. Crie um arquivo .env a partir de .env.example.",
+      "A API não foi configurada. Crie um arquivo .env a partir de .env.example.",
     );
   }
 
@@ -64,7 +77,7 @@ async function request<T>(
         : { body: JSON.stringify(options.body) }),
     });
   } catch {
-    throw new ApiError("NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o foi possÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel conectar ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  API.");
+    throw new ApiError("Não foi possível conectar à API. Verifique se o servidor está em execução e se o celular está na mesma rede Wi-Fi.");
   }
 
   const payload = await response.json().catch(() => null);
@@ -145,7 +158,7 @@ export function criarSolicitacao(input: CriarSolicitacaoInput) {
 }
 
 export function listarMinhasSolicitacoes(clienteId: number) {
-  return request<Solicitacao[]>(`/solicitacoes?cliente_id=${clienteId}`);
+  return request<Solicitacao[]>(`/solicitacoes?cliente_id=${encodeURIComponent(clienteId)}`);
 }
 
 export function cancelarSolicitacao(id: number) {
@@ -157,10 +170,12 @@ export function cancelarSolicitacao(id: number) {
   );
 }
 
-export function getUserProfile() {
-  return request<UserProfile>("/usuario/perfil");
+export function getUserProfile(usuarioId: number) {
+  return request<UserProfile>(`/usuario/perfil?usuario_id=${encodeURIComponent(usuarioId)}`);
 }
 
 export function logout() {
-  return request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
+  return request<{ sucesso: boolean }>("/auth/logout", { method: "POST" }).finally(
+    limparUsuarioAtual,
+  );
 }

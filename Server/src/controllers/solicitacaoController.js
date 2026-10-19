@@ -65,8 +65,8 @@ async function criarSolicitacao(req, res) {
 }
 
 async function listarSolicitacoesCliente(req, res) {
-  const { cliente_id } = req.query;
-  if (!cliente_id) {
+  const clienteId = Number(req.query.cliente_id);
+  if (!Number.isInteger(clienteId) || clienteId <= 0) {
     return res.status(400).json({ erro: "Informe o cliente_id." });
   }
 
@@ -78,7 +78,7 @@ async function listarSolicitacoesCliente(req, res) {
          JOIN categorias_servico c ON c.id = s.categoria_id
         WHERE s.cliente_id = ?
         ORDER BY s.criado_em DESC`,
-      [cliente_id]
+      [clienteId]
     );
     return res.json(rows);
   } catch (erro) {

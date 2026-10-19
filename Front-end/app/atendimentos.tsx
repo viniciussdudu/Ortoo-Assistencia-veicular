@@ -11,10 +11,13 @@ import {
 } from "react-native";
 
 import { colors } from "../constants/colors";
-import { ApiError, cancelarSolicitacao, listarMinhasSolicitacoes, Solicitacao } from "../src/services/api";
-
-// TODO: substituir pela identificação vinda da sessão autenticada.
-const CLIENTE_ID = 1;
+import {
+  ApiError,
+  cancelarSolicitacao,
+  listarMinhasSolicitacoes,
+  obterUsuarioAtual,
+  Solicitacao,
+} from "../src/services/api";
 
 const statusInfo: Record<Solicitacao["status"], { label: string; background: string; color: string }> = {
   PENDENTE: { label: "Pendente", background: colors.terracotaLight, color: colors.terracota },
@@ -46,7 +49,11 @@ export default function Atendimentos() {
     }
     try {
       setErro(null);
-      setAtendimentos(await listarMinhasSolicitacoes(CLIENTE_ID));
+      const usuario = obterUsuarioAtual();
+      if (!usuario) {
+        throw new ApiError("Sua sessão expirou. Entre novamente para ver seus atendimentos.");
+      }
+      setAtendimentos(await listarMinhasSolicitacoes(usuario.id));
     } catch (error) {
       setErro(error instanceof ApiError ? error.message : "Não foi possível carregar os atendimentos.");
     } finally {

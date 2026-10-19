@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { ShowAlert } from "../components/alert";
-import { ApiError, login } from "../src/services/api";
+import { ApiError, definirUsuarioAtual, login } from "../src/services/api";
 
 export default function Index() {
   const router = useRouter();
@@ -19,7 +19,8 @@ export default function Index() {
     setSubmitting(true);
 
     try {
-      await login({ email, password });
+      const usuario = await login({ email, password });
+      definirUsuarioAtual(usuario);
       ShowAlert("Login realizado", "Seus dados estão corretos.");
       router.replace("/home");
     } catch (error) {

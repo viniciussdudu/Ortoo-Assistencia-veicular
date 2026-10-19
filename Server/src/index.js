@@ -60,7 +60,7 @@ app.use((error, req, res, next) => {
   res.status(500).json({ erro: "Erro interno do servidor." });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor Ortoo rodando em http://localhost:${PORT}`);
+const PORT = Number(process.env.PORT) || 3001;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Servidor Ortoo rodando em http://0.0.0.0:${PORT}`);
 });
