@@ -101,17 +101,24 @@ export default function Home() {
               <Text style={styles.marca}>Örtöö</Text>
               <Text style={styles.marcaSub}>Assistência veicular</Text>
             </View>
-            <TouchableOpacity
-              style={styles.botaoPerfil}
-              onPress={() => router.push("/perfil")}
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons
-                name="account-outline"
-                size={22}
-                color={CORES.texto}
-              />
-            </TouchableOpacity>
+            <View style={styles.acoesCabecalho}>
+              <TouchableOpacity
+                style={styles.botaoPerfil}
+                onPress={() => router.push("/atendimentos")}
+                accessibilityLabel="Meus atendimentos"
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons name="clipboard-list-outline" size={22} color={CORES.texto} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.botaoPerfil}
+                onPress={() => router.push("/perfil")}
+                accessibilityLabel="Meu perfil"
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons name="account-outline" size={22} color={CORES.texto} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* TITULO */}
@@ -271,6 +278,7 @@ const styles = StyleSheet.create({
     color: CORES.textoSuave,
     marginTop: 1,
   },
+  acoesCabecalho: { flexDirection: "row", gap: 10 },
   botaoPerfil: {
     width: 44,
     height: 44,

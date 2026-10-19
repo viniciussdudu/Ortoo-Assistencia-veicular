@@ -17,7 +17,7 @@ function isValidCpf(cpf) {
     const remainder = (sum * 10) % 11;
     return remainder === 10 ? 0 : remainder;
   };
-  
+
 
   return (
     calculateDigit(cpf.slice(0, 9), 10) === Number(cpf[9]) &&

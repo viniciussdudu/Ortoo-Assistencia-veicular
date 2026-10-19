@@ -98,7 +98,6 @@ router.get("/prestadores/categoria/:categoria_id", async (req, res) => {
 });
 
 // Rotas de Pagamento e Cartões
-router.get("pagamento/")
 router.post("/pagamento/novo-cartao", paymentController.criarSetupIntent);
 router.post("/pagamento/salvar-cartao", paymentController.salvarCartao);
 

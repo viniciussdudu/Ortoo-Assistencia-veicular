@@ -16,11 +16,9 @@ import {
   ApiError,
   Categoria,
   criarSolicitacao,
+  getUserProfile,
   listarCategorias,
 } from "../src/services/api";
-
-// TODO: substituir pelo id do usuario logado quando houver sessao real.
-const CLIENTE_ID = 1;
 
 export default function SolicitarAssistencia() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -79,8 +77,9 @@ export default function SolicitarAssistencia() {
 
     setEnviando(true);
     try {
+      const usuario = await getUserProfile();
       await criarSolicitacao({
-        cliente_id: CLIENTE_ID,
+        cliente_id: usuario.id,
         categoria_id: categoriaId,
         descricao_problema: descricao.trim() || undefined,
         latitude_origem: coords.latitude,

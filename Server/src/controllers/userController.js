@@ -63,7 +63,10 @@ async function getProfile(req, res, next) {
 }
 
 async function updateProfile(req, res, next) {
-  const usuarioId = req.body.usuario_id || req.userId || 1;
+  const usuarioId = req.userId;
+  if (!usuarioId) {
+    return res.status(401).json({ erro: "Usuário não autenticado." });
+  }
   const {
     nome,
     telefone,
@@ -104,7 +107,7 @@ async function updateProfile(req, res, next) {
                                disponivel = COALESCE(?, disponivel)
                                WHERE usuario_id = ?`,
                                [
-                                 nome_fantasia ? nomeFantasia.trim() : null,
+                                 nome_fantasia ? nome_fantasia.trim() : null,
                                descricao_empresa ? descricao_empresa.trim() : null,
                                raio_atendimento_km !== undefined ? Number(raio_atendimento_km) : null,
                                disponivel !== undefined ? Boolean(disponivel) : null,

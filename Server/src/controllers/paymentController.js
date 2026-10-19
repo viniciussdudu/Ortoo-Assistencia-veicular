@@ -5,6 +5,12 @@ const db = require('../config/db');
 async function criarSetupIntent(req, res) {
   const { usuario_id } = req.body;
 
+  if (!stripe) {
+    return res.status(503).json({
+      erro: 'Stripe não foi configurado. Defina STRIPE_SECRET_KEY no ambiente do servidor.',
+    });
+  }
+
   try {
     const [rows] = await db.query(
       'SELECT stripe_customer_id, email, nome FROM usuarios WHERE id = ?',

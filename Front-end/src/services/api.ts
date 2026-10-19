@@ -76,9 +76,7 @@ export class ApiError extends Error {
   }
 }
 
-const apiUrl = (
-  process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api"
-).replace(/\/$/, "");
+const apiUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
 
 function getApiUrl() {
   if (!apiUrl) {
@@ -112,10 +110,8 @@ async function request<T>(
       ? {}
       : { body: JSON.stringify(options.body) }),
     });
-  } catch (erro) {
-    console.log("URL chamada:", `${getApiUrl()}${path}`);
-    console.log("Erro original:", erro);
-    throw new ApiError("Não foi possível conectar à API.");
+  } catch {
+    throw new ApiError("Não foi possível conectar à API. Verifique se o servidor está em execução e se o celular está na mesma rede Wi-Fi.");
   }
 
   const payload = await response.json().catch(() => null);
@@ -279,7 +275,7 @@ export function criarSolicitacao(input: CriarSolicitacaoInput) {
 }
 
 export function listarMinhasSolicitacoes(clienteId: number) {
-  return request<Solicitacao[]>(`/solicitacoes?cliente_id=${clienteId}`);
+  return request<Solicitacao[]>(`/solicitacoes?cliente_id=${encodeURIComponent(clienteId)}`);
 }
 
 export function cancelarSolicitacao(id: number) {
@@ -356,7 +352,7 @@ export function salvarCartao(input: SalvarCartaoInput) {
 }
 
 export function listarCartoes(usuarioId: number) {
-  return request<CartaoUsuario[]>(`/pagamento/cartoes?usuario_id=${usuarioId}`);
+  return request<CartaoUsuario[]>(`/pagamento/cartoes?usuario_id=${encodeURIComponent(usuarioId)}`);
 }
 
 export type TipoVeiculo = "CARRO" | "MOTO" | "BICICLETA" | "BIKE_ELETRICA" | "CAMINHAO";
@@ -410,6 +406,8 @@ export function atualizarQuilometragem(id: number, km_atual: number) {
     `/veiculos/${id}/quilometragem`,
     { method: "PATCH", body: { km_atual } },
   );
+}
+
 // O backend descobre o prestador pelo token; o app não envia prestador_id.
 export type CadastrarServicoInput = {
   categoria_id: number;

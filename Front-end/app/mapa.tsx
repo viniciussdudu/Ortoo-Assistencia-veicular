@@ -307,8 +307,8 @@ export default function TelaMapa() {
       const response = await fetch(`${API_URL}/pagamento/transacoes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          solicitacao_id: solicitacaoId,  
+        body: JSON.stringify({
+          solicitacao_id: solicitacaoId,
           usuario_id: CLIENTE_ID,
         })
       });
