@@ -1,6 +1,6 @@
 const db = require("../config/db");
 
-const CAMPOS_OBRIGATORIOS = ["cliente_id", "categoria_id", "latitude_origem", "longitude_origem"];
+const CAMPOS_OBRIGATORIOS = ["categoria_id", "prestador_id", "latitude_origem", "longitude_origem"];
 
 // 1. Listar categorias para o app
 async function listarCategorias(req, res) {
@@ -17,7 +17,8 @@ async function listarCategorias(req, res) {
 
 // 2. Criar nova solicitação (com limpeza de solicitações 'PENDENTE' antigas)
 async function criarSolicitacao(req, res) {
-  const { cliente_id, categoria_id, latitude_origem, longitude_origem, descricao_problema } = req.body;
+  const { categoria_id, prestador_id, latitude_origem, longitude_origem, descricao_problema } = req.body;
+  const cliente_id = req.userId;
 
   // Validação de campos obrigatórios
   const faltando = CAMPOS_OBRIGATORIOS.filter(
@@ -25,6 +26,11 @@ async function criarSolicitacao(req, res) {
   );
   if (faltando.length > 0) {
     return res.status(400).json({ erro: `Campos obrigatorios ausentes: ${faltando.join(", ")}.` });
+  }
+
+  const prestadorId = Number(prestador_id);
+  if (!Number.isInteger(prestadorId) || prestadorId <= 0) {
+    return res.status(400).json({ erro: "Prestador inválido." });
   }
 
   // Validação de coordenadas GPS
@@ -35,6 +41,18 @@ async function criarSolicitacao(req, res) {
   }
 
   try {
+    const [prestadores] = await db.execute(
+      `SELECT p.id
+         FROM perfis_prestadores p
+         JOIN servicos_prestador sp ON sp.prestador_id = p.id
+        WHERE p.id = ? AND sp.categoria_id = ? AND p.disponivel = TRUE
+        LIMIT 1`,
+      [prestadorId, categoria_id]
+    );
+    if (prestadores.length === 0) {
+      return res.status(404).json({ erro: "Prestador indisponível para este serviço." });
+    }
+
     // Cancela automaticamente qualquer solicitação 'PENDENTE' anterior que ficou aberta por engano
     await db.query(
       `UPDATE solicitacoes 
@@ -46,17 +64,19 @@ async function criarSolicitacao(req, res) {
     // Insere a nova solicitação
     const [resultado] = await db.query(
       `INSERT INTO solicitacoes
-        (cliente_id, categoria_id, descricao_problema, latitude_origem, longitude_origem, status)
-       VALUES (?, ?, ?, ?, ?, 'PENDENTE')`,
-      [cliente_id, categoria_id, descricao_problema ?? null, lat, lng]
+        (cliente_id, prestador_id, categoria_id, descricao_problema, latitude_origem, longitude_origem, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'PENDENTE')`,
+      [cliente_id, prestadorId, categoria_id, descricao_problema ?? null, lat, lng]
     );
 
     // Retorna a solicitação criada já com o nome da categoria vinculada
     const [criada] = await db.query(
-      `SELECT s.id, s.status, s.descricao_problema, s.latitude_origem, s.longitude_origem,
-              s.criado_em, c.nome AS categoria_nome
+      `SELECT s.id, s.prestador_id, s.status, s.descricao_problema, s.latitude_origem, s.longitude_origem,
+              s.criado_em, c.nome AS categoria_nome, COALESCE(p.nome_fantasia, u.nome) AS prestador_nome
          FROM solicitacoes s
          JOIN categorias_servico c ON c.id = s.categoria_id
+         JOIN perfis_prestadores p ON p.id = s.prestador_id
+         JOIN usuarios u ON u.id = p.usuario_id
         WHERE s.id = ?`,
       [resultado.insertId]
     );
@@ -73,17 +93,20 @@ async function criarSolicitacao(req, res) {
 
 // 3. Listar histórico de solicitações do cliente
 async function listarSolicitacoesCliente(req, res) {
-  const clienteId = Number(req.query.cliente_id);
+  const clienteId = req.userId;
   if (!Number.isInteger(clienteId) || clienteId <= 0) {
     return res.status(400).json({ erro: "Informe o cliente_id." });
   }
 
   try {
     const [rows] = await db.query(
-      `SELECT s.id, s.status, s.descricao_problema, s.latitude_origem, s.longitude_origem,
-              s.valor_estimado, s.criado_em, c.nome AS categoria_nome
+      `SELECT s.id, s.prestador_id, s.status, s.descricao_problema, s.latitude_origem, s.longitude_origem,
+              s.valor_estimado, s.criado_em, c.nome AS categoria_nome,
+              COALESCE(p.nome_fantasia, prestador.nome) AS prestador_nome
          FROM solicitacoes s
          JOIN categorias_servico c ON c.id = s.categoria_id
+         LEFT JOIN perfis_prestadores p ON p.id = s.prestador_id
+         LEFT JOIN usuarios prestador ON prestador.id = p.usuario_id
         WHERE s.cliente_id = ?
         ORDER BY s.criado_em DESC`,
       [clienteId]
@@ -123,6 +146,13 @@ async function cancelarSolicitacao(req, res) {
 // 5. Listar solicitações pendentes (para a tela/mapa do mecânico)
 async function listarPendentes(req, res) {
   try {
+    const [perfis] = await db.execute(
+      "SELECT id FROM perfis_prestadores WHERE usuario_id = ? LIMIT 1",
+      [req.userId]
+    );
+    if (perfis.length === 0) {
+      return res.status(403).json({ erro: "Apenas prestadores podem consultar atendimentos." });
+    }
     const [rows] = await db.query(
       `SELECT
         s.id,
@@ -139,8 +169,10 @@ async function listarPendentes(req, res) {
        FROM solicitacoes s
        JOIN usuarios u ON s.cliente_id = u.id
        LEFT JOIN categorias_servico c ON s.categoria_id = c.id
-       WHERE s.status = 'PENDENTE'
-       ORDER BY s.criado_em DESC`
+       WHERE s.prestador_id = ?
+         AND s.status IN ('PENDENTE', 'ACEITO', 'A_CAMINHO', 'EM_ANDAMENTO')
+       ORDER BY s.criado_em DESC`,
+      [perfis[0].id]
     );
 
     return res.json(rows);

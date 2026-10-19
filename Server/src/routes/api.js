@@ -8,6 +8,7 @@ const userController = require("../controllers/userController");
 const solicitacaoController = require("../controllers/solicitacaoController");
 const paymentController = require("../controllers/paymentController");
 const veiculoController = require("../controllers/veiculoController");
+const chatController = require("../controllers/chatController");
 
 const router = express.Router();
 
@@ -31,17 +32,21 @@ router.post("/auth/login", authController.login);
 router.post("/auth/logout", authController.logout);
 router.post("/auth/recuperar-senha", authController.recuperarSenha);
 
+// Conversa vinculada ao atendimento: somente cliente e prestador participantes.
+router.get("/solicitacoes/:id/chat", requireAuth, chatController.listarMensagens);
+router.post("/solicitacoes/:id/chat", requireAuth, chatController.enviarMensagem);
+
 // Rotas de Usuário / Perfil
 router.get("/usuario/perfil", requireAuth, userController.getProfile);
 
 // Rotas de Solicitações e Categorias
 router.get("/categorias", solicitacaoController.listarCategorias);
-router.post("/solicitacoes", solicitacaoController.criarSolicitacao);
-router.get("/solicitacoes", solicitacaoController.listarSolicitacoesCliente);
+router.post("/solicitacoes", requireAuth, solicitacaoController.criarSolicitacao);
+router.get("/solicitacoes", requireAuth, solicitacaoController.listarSolicitacoesCliente);
 router.patch("/solicitacoes/:id/cancelar", solicitacaoController.cancelarSolicitacao);
 
 // Rotas de acompanhamento de solicitações
-router.get("/solicitacoes/pendentes", solicitacaoController.listarPendentes);
+router.get("/solicitacoes/pendentes", requireAuth, solicitacaoController.listarPendentes);
 router.get("/solicitacoes/:id", solicitacaoController.buscarPorId);
 router.patch("/solicitacoes/:id/status", solicitacaoController.atualizarStatus);
 
