@@ -71,7 +71,7 @@ export default function SolicitarAssistencia() {
         longitude_origem: coords.longitude,
       });
       Alert.alert("Pronto", "Sua solicitacao foi enviada. Procurando prestadores proximos.", [
-        { text: "OK", onPress: () => router.back() },
+        { text: "Ver atendimentos", onPress: () => router.replace("/atendimentos") },
       ]);
     } catch (erro) {
       Alert.alert("Erro", erro instanceof ApiError ? erro.message : "Falha ao enviar a solicitacao.");

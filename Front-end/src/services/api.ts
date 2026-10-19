@@ -4,6 +4,12 @@ export type RegisteredUser = {
   email: string;
 };
 
+export type UserProfile = {
+  usuario: RegisteredUser;
+  veiculo: { modelo: string; placa: string; cor: string } | null;
+  historico: { id: number; problema: string; data: string; status: string }[];
+};
+
 export type RegisterInput = {
   nome: string;
   email: string;

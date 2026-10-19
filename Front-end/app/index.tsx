@@ -21,6 +21,7 @@ export default function Index() {
     try {
       await login({ email, password });
       ShowAlert("Login realizado", "Seus dados estão corretos.");
+      router.replace("/home");
     } catch (error) {
       ShowAlert("Não foi possível entrar", error instanceof ApiError ? error.message : "Tente novamente.");
     } finally {

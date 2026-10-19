@@ -1,4 +1,5 @@
 const express = require("express");
+const db = require("../config/db");
 const authController = require("../controllers/authController");
 const userController = require("../controllers/userController");
 const solicitacaoController = require("../controllers/solicitacaoController");

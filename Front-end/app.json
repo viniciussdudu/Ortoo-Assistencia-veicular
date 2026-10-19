@@ -42,9 +42,10 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "O Ortoo usa sua localizacao para encontrar prestadores proximos."
+          "locationAlwaysAndWhenInUsePermission": "Permita o acesso à localização para acompanhar o mecânico e solicitar atendimento em tempo real."
         }
       ]
+
     ],
     "experiments": {
       "typedRoutes": true,

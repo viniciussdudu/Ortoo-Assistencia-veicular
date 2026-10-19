@@ -1,0 +1,15 @@
+﻿export const colors = {
+  navy: "#1F3140",
+  navyMuted: "#4A5A68",
+  terracota: "#C85A34",
+  terracotaLight: "#F3D9CC",
+  cream: "#F3EBDA",
+  creamLight: "#FAF6EE",
+  white: "#FFFFFF",
+  border: "#E4D9C4",
+  textMuted: "#6B7280",
+  success: "#2E7D4F",
+  successBg: "#DCEEE1",
+  danger: "#B3382C",
+  dangerBg: "#F6DEDA",
+};
