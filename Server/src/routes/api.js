@@ -1,5 +1,6 @@
 const express = require("express");
 const db = require("../config/db");
+const { requireAuth } = require("../middlewares/auth");
 
 const prestadorController = require("../controllers/prestadorControllers");
 const authController = require("../controllers/authController");
@@ -31,8 +32,7 @@ router.post("/auth/logout", authController.logout);
 router.post("/auth/recuperar-senha", authController.recuperarSenha);
 
 // Rotas de Usuário / Perfil
-router.get("/usuario/perfil", userController.getProfile);
-router.put("/usuario/perfil", userController.updateProfile);
+router.get("/usuario/perfil", requireAuth, userController.getProfile);
 
 // Rotas de Solicitações e Categorias
 router.get("/categorias", solicitacaoController.listarCategorias);
@@ -66,6 +66,7 @@ router.post("/solicitacoes/cancelar", async (req, res) => {
 
 // Rotas de Prestadores
 router.get("/prestadores", prestadorController.listarPrestadores);
+router.post("/servicos", requireAuth, prestadorController.cadastrarServico);
 
 // Rota para listar prestadores por categoria de serviço
 router.get("/prestadores/categoria/:categoria_id", async (req, res) => {

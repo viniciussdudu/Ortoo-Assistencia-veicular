@@ -5,7 +5,7 @@ async function listarPrestadores(req, res) {
 
   try {
     let sql = `
-      SELECT p.id AS prestador_id, u.nome, u.foto_url,
+      SELECT p.id AS prestador_id, p.usuario_id, u.nome, u.foto_url,
              p.nome_fantasia, p.descricao_empresa, p.disponivel,
              p.raio_atendimento_km, p.latitude_atual, p.longitude_atual
         FROM perfis_prestadores p
@@ -52,7 +52,9 @@ async function listarPrestadores(req, res) {
 
     const resultado = prestadores.map((p) => ({
       id: p.prestador_id,
+      usuario_id: p.usuario_id,
       nome: p.nome_fantasia || p.nome,
+      nome_fantasia: p.nome_fantasia,
       foto_url: p.foto_url,
       descricao_empresa: p.descricao_empresa,
       disponivel: !!p.disponivel,
@@ -67,4 +69,70 @@ async function listarPrestadores(req, res) {
   }
 }
 
-module.exports = { listarPrestadores };
+async function cadastrarServico(req, res) {
+  const categoriaId = Number(req.body?.categoria_id);
+  const preco = Number(req.body?.preco_base);
+
+  if (!Number.isInteger(categoriaId) || categoriaId <= 0) {
+    return res.status(400).json({ erro: "Informe uma categoria válida." });
+  }
+
+  const centavosValidos =
+    Number.isFinite(preco) && Math.abs(preco * 100 - Math.round(preco * 100)) < 1e-6;
+  if (!centavosValidos || preco <= 0 || preco > 99999.99) {
+    return res.status(400).json({
+      erro: "Informe um preço maior que zero, até 99999.99, com no máximo 2 casas decimais.",
+    });
+  }
+
+  try {
+    // O prestador vem do usuário autenticado (req.userId, definido pelo token),
+    // nunca de um id enviado pelo app.
+    const [perfis] = await db.execute(
+      "SELECT id FROM perfis_prestadores WHERE usuario_id = ? LIMIT 1",
+      [req.userId]
+    );
+    if (perfis.length === 0) {
+      return res
+        .status(403)
+        .json({ erro: "Sua conta não possui perfil de prestador." });
+    }
+    const prestadorId = perfis[0].id;
+
+    const [categorias] = await db.execute(
+      "SELECT id, nome FROM categorias_servico WHERE id = ?",
+      [categoriaId]
+    );
+    if (categorias.length === 0) {
+      return res.status(404).json({ erro: "Categoria não encontrada." });
+    }
+
+    const [existentes] = await db.execute(
+      "SELECT id FROM servicos_prestador WHERE prestador_id = ? AND categoria_id = ? LIMIT 1",
+      [prestadorId, categoriaId]
+    );
+    if (existentes.length > 0) {
+      return res
+        .status(409)
+        .json({ erro: "Você já oferece um serviço nesta categoria." });
+    }
+
+    const [resultado] = await db.execute(
+      "INSERT INTO servicos_prestador (prestador_id, categoria_id, preco_base) VALUES (?, ?, ?)",
+      [prestadorId, categoriaId, preco]
+    );
+
+    return res.status(201).json({
+      id: resultado.insertId,
+      prestador_id: prestadorId,
+      categoria_id: categoriaId,
+      categoria_nome: categorias[0].nome,
+      preco_base: preco,
+    });
+  } catch (erro) {
+    console.error(erro);
+    return res.status(500).json({ erro: "Não foi possível cadastrar o serviço." });
+  }
+}
+
+module.exports = { listarPrestadores, cadastrarServico };

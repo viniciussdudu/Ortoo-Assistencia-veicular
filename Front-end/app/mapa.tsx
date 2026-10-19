@@ -179,7 +179,7 @@ export default function TelaMapa() {
     return {
       latitude: lat,
       longitude: lng,
-      heading: 0,
+      headin: 0,
     };
   }, [prestadorSelecionado?.latitude_atual, prestadorSelecionado?.longitude_atual]);
 
