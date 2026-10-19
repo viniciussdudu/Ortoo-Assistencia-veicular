@@ -329,7 +329,7 @@ export type CartaoUsuario = {
 
 export type SalvarCartaoInput = {
   usuario_id: number;
-  payment_method_id: string;
+  setup_intent_id: string;
   ultimos_digitos?: string;
   bandeira?: string;
   validade_mes?: number;
@@ -339,7 +339,7 @@ export type SalvarCartaoInput = {
 };
 
 export function criarSetupIntentCartao(usuarioId: number) {
-  return request<{ client_secret: string }>("/pagamento/novo-cartao", {
+  return request<{ client_secret: string; setup_intent_id: string }>("/pagamento/novo-cartao", {
     method: "POST",
     body: { usuario_id: usuarioId },
   });

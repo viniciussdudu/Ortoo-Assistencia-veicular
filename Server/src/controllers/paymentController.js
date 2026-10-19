@@ -32,7 +32,10 @@ async function criarSetupIntent(req, res) {
       payment_method_types: ['card'],
     });
 
-    res.json({ client_secret: setupIntent.client_secret });
+    res.json({
+      client_secret: setupIntent.client_secret,
+      setup_intent_id: setupIntent.id,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ erro: error.message });
@@ -106,19 +109,54 @@ async function criarTransacao(req, res) {
 }
 
 async function salvarCartao(req, res) {
-  const { usuario_id, payment_method_id, ultimos_digitos, bandeira, validade_mes, validade_ano } = req.body;
+  const { usuario_id, setup_intent_id } = req.body;
+
+  if (!usuario_id || !setup_intent_id) {
+    return res.status(400).json({
+      erro: 'Informe o ID do usuário e do SetupIntent.',
+    });
+  }
 
   try {
-    await db.query(
-      `INSERT INTO cartoes_usuario 
-        (usuario_id, gateway, token_gateway, ultimos_digitos, bandeira, validade_mes, validade_ano) 
-       VALUES (?, 'stripe', ?, ?, ?, ?, ?)`,
-      [usuario_id, payment_method_id, ultimos_digitos, bandeira, validade_mes, validade_ano]
+    const [usuarios] = await db.query(
+      'SELECT stripe_customer_id FROM usuarios WHERE id = ?',
+      [usuario_id]
     );
 
-    res.json({ sucesso: true });
+    if (usuarios.length === 0) {
+      return res.status(404).json({ erro: 'Usuário não encontrado.' });
+    }
+
+    const setupIntent = await stripe.setupIntents.retrieve(setup_intent_id, {
+      expand: ['payment_method'],
+    });
+
+    if (
+      setupIntent.status !== 'succeeded' ||
+      setupIntent.customer !== usuarios[0].stripe_customer_id
+    ) {
+      return res.status(400).json({
+        erro: 'O cartão não foi confirmado para este usuário.',
+      });
+    }
+
+    const pm = setupIntent.payment_method;
+    if (!pm || typeof pm === 'string' || !pm.card) {
+      return res.status(400).json({
+        erro: 'O método de pagamento confirmado não é um cartão.',
+      });
+    }
+
+    await db.query(
+      `INSERT INTO cartoes_usuario
+       (usuario_id, gateway, token_gateway, ultimos_digitos, bandeira, validade_mes, validade_ano)
+       VALUES (?, 'stripe', ?, ?, ?, ?, ?)`,
+      [usuario_id, pm.id, pm.card.last4, pm.card.brand, pm.card.exp_month, pm.card.exp_year]
+    );
+    res.json({ sucesso: true, mensagem: 'Cartão salvo com sucesso.' });
   } catch (error) {
-    res.status(500).json({ erro: error.message });
+    console.error('Erro ao salvar cartão:', error);
+    res.status(500).json({ erro: 'Erro ao salvar cartão.' });
   }
 }
 
@@ -128,7 +166,7 @@ async function cobrarCartao(req, res) {
 
   try {
     const [transacoes] = await db.query(
-      'SELECT * FROM transacoes WHERE id = ?',
+      'SELECT id, valor FROM transacoes t WHERE id = ?',
       [transacao_id]
     );
 
@@ -137,6 +175,21 @@ async function cobrarCartao(req, res) {
     }
 
     const transacao = transacoes[0];
+    const valor_transacao = transacoes[1];
+    console.log(transacao);
+
+    [objeto_client] = await db.query(
+      'SELECT cliente_id FROM solicitacoes WHERE id = ?',
+      [transacao.solicitacao_id]
+    );
+
+    if (objeto_client.length === 0) {
+      return res.status(404).json({ erro: 'Solicitação não encontrada.' });
+    }
+
+    const cliente_transacao = objeto_client[0].cliente_id;
+
+    console.log(cliente_transacao);
 
     // Trata pagamentos PIX ou DINHEIRO diretamente sem exigir Stripe
     if (metodo_pagamento === 'PIX' || metodo_pagamento === 'DINHEIRO') {
@@ -157,14 +210,43 @@ async function cobrarCartao(req, res) {
     }
 
     // Lógica para Cartão de Crédito
-    const [cartoes] = await db.query(
-      'SELECT * FROM cartoes_usuario WHERE usuario_id = ? AND principal = 1',
-      [transacao.usuario_id]
+    const stripe_costumer_id = await db.query(
+      'SELECT stripe_customer_id FROM usuarios WHERE id = ?',
+      [cliente_transacao]
+    );
+
+    const token_gateway = await db.query(
+      'SELECT token_gateway FROM cartoes_usuario WHERE usuario_id = ? AND principal = 1',
+      [cliente_transacao]
     );
 
     if (cartoes.length === 0) {
       return res.status(400).json({
         erro: 'Nenhum cartão principal encontrado para este usuário.',
+      });
+    }
+
+    await stripe.paymentIntents.create(
+      {
+        amount: Math.round(Number(valor_transacao)),
+        currency: 'brl',
+        customer: stripe_costumer_id,
+        payment_method: token_gateway,
+        off_session: true,
+        confirm: true,
+      },
+      { idempotencyKey: `cobranca-solicitacao-${solicitacao_id}` }
+    );
+
+    // Erros de cartão (recusado, 3D Secure exigido, etc.)
+    if (error.type === 'StripeCardError') {
+      await db.query(
+        `INSERT INTO transacoes (solicitacao_id, valor, status) VALUES (?, 0, 'failed')`,
+        [solicitacao_id]
+      ).catch(() => {});
+      return res.status(402).json({
+        erro: error.message,
+        code: error.code,
       });
     }
 
