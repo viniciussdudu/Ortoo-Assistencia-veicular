@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ApiError, getUserProfile, logout } from "../src/services/api";
+import { ApiError, getUserProfile, obterUsuarioAtual, logout } from "../src/services/api";
 
 const CORES = {
   fundo: "#000000",
@@ -41,7 +41,11 @@ export default function Perfil() {
   const fetchPerfil = async () => {
     try {
       setLoading(true);
-      const data = await getUserProfile();
+      const usuarioAtual = obterUsuarioAtual();
+      if (!usuarioAtual) {
+        throw new ApiError("Sua sessão expirou. Entre novamente para ver seu perfil.");
+      }
+      const data = await getUserProfile(usuarioAtual.id);
 
       setUsuario(data);
       setVeiculo((data as any).veiculo);

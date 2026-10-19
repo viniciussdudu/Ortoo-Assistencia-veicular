@@ -19,17 +19,18 @@ import { ShowAlert } from "@/components/alert";
 
 // Importações centralizadas do arquivo de serviços
 import {
+  ApiError,
   cancelarSolicitacao,
   CartaoUsuario,
+  cobrarCartao,
   criarSolicitacao,
+  criarTransacao,
   listarCartoes,
   listarMinhasSolicitacoes,
+  listarPrestadoresPorCategoria,
+  obterUsuarioAtual,
   Prestador,
 } from "../src/services/api";
-
-// TODO: substituir pelo ID do usuário logado na sessão real
-const CLIENTE_ID = 1;
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api";
 
 export default function TelaMapa() {
   const router = useRouter();
@@ -144,19 +145,16 @@ export default function TelaMapa() {
 
       try {
         setCarregandoPrestadores(true);
-        const response = await fetch(`${API_URL}/prestadores/categoria/${categoria_id}`);
-        const data = await response.json();
-
-        if (response.ok) {
-          setPrestadores(data);
-          if (data.length > 0) {
-            setPrestadorSelecionado(data[0]);
-          }
-        } else {
-          Alert.alert("Erro", data.erro || "Falha ao buscar prestadores disponíveis.");
+        const data = await listarPrestadoresPorCategoria(Number(categoria_id));
+        setPrestadores(data);
+        if (data.length > 0) {
+          setPrestadorSelecionado(data[0]);
         }
       } catch (error) {
-        console.error("Erro ao buscar prestadores:", error);
+        Alert.alert(
+          "Erro",
+          error instanceof ApiError ? error.message : "Falha ao buscar prestadores disponíveis.",
+        );
       } finally {
         setCarregandoPrestadores(false);
       }
@@ -205,7 +203,9 @@ export default function TelaMapa() {
     async function buscarCartoes() {
       try {
         setCarregandoCartoes(true);
-        const data = await listarCartoes(CLIENTE_ID);
+        const usuario = obterUsuarioAtual();
+        if (!usuario) return;
+        const data = await listarCartoes(usuario.id);
         setCartoes(data);
       } catch (error) {
         console.error("Erro ao buscar cartões:", error);
@@ -219,19 +219,7 @@ export default function TelaMapa() {
 
   // Envia a cobrança incluindo o método de pagamento selecionado
   async function realizarPagamento(transacaoId: number, metodo: string) {
-    const response = await fetch(`${API_URL}/pagamento/cobrar`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        transacao_id: transacaoId,
-        metodo_pagamento: metodo,
-      }),
-    });
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.erro || "Não foi possível realizar o pagamento.");
-    }
+    await cobrarCartao({ transacao_id: transacaoId, metodo_pagamento: metodo });
   }
 
   // Função disparada ao clicar no botão 'Chamar'
@@ -247,9 +235,13 @@ export default function TelaMapa() {
     }
 
     try {
+      const usuario = obterUsuarioAtual();
+      if (!usuario) {
+        throw new ApiError("Sua sessão expirou. Entre novamente para solicitar assistência.");
+      }
       // 1. Tenta criar uma nova solicitação no backend
       const novaSolicitacao = await criarSolicitacao({
-        cliente_id: CLIENTE_ID,
+        cliente_id: usuario.id,
         categoria_id: Number(categoria_id) || 1,
         latitude_origem: clienteCoords.latitude,
         longitude_origem: clienteCoords.longitude,
@@ -268,7 +260,9 @@ export default function TelaMapa() {
         error?.message?.includes("já possui")
       ) {
         try {
-          const solicitacoes = await listarMinhasSolicitacoes(CLIENTE_ID);
+          const usuario = obterUsuarioAtual();
+          if (!usuario) throw new ApiError("Sua sessão expirou.");
+          const solicitacoes = await listarMinhasSolicitacoes(usuario.id);
 
           const ativa = solicitacoes.find(
             (s) =>
@@ -304,16 +298,7 @@ export default function TelaMapa() {
     setProcessandoPagamento(true);
 
     try {
-      const response = await fetch(`${API_URL}/pagamento/transacoes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ solicitacao_id: solicitacaoId }),
-      });
-      const transacao = await response.json();
-
-      if (!response.ok) {
-        throw new Error(transacao.erro || "Não foi possível criar a transação.");
-      }
+      const transacao = await criarTransacao(solicitacaoId);
 
       await realizarPagamento(transacao.id, metodo);
       setMostrarPagamentos(false);

@@ -17,10 +17,8 @@ import {
   Categoria,
   criarSolicitacao,
   listarCategorias,
+  obterUsuarioAtual,
 } from "../src/services/api";
-
-// TODO: substituir pelo id do usuario logado quando houver sessao real.
-const CLIENTE_ID = 1;
 
 export default function SolicitarAssistencia() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -79,8 +77,12 @@ export default function SolicitarAssistencia() {
 
     setEnviando(true);
     try {
+      const usuario = obterUsuarioAtual();
+      if (!usuario) {
+        throw new ApiError("Sua sessão expirou. Entre novamente para solicitar assistência.");
+      }
       await criarSolicitacao({
-        cliente_id: CLIENTE_ID,
+        cliente_id: usuario.id,
         categoria_id: categoriaId,
         descricao_problema: descricao.trim() || undefined,
         latitude_origem: coords.latitude,

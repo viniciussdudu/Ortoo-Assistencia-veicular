@@ -1,9 +1,12 @@
 const db = require("../config/db");
 
 async function getProfile(req, res, next) {
-  try {
-    const usuarioId = req.userId || 1;
+  const usuarioId = Number(req.query.usuario_id);
+  if (!Number.isInteger(usuarioId) || usuarioId <= 0) {
+    return res.status(400).json({ erro: "Informe um usuario_id válido." });
+  }
 
+  try {
     const [usuarios] = await db.execute(
       "SELECT id, nome, email, telefone, tipo_usuario FROM usuarios WHERE id = ?",
       [usuarioId]

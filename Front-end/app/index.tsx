@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ShowAlert } from "../components/alert";
-import { ApiError, login } from "../src/services/api";
+import { ApiError, definirUsuarioAtual, login } from "../src/services/api";
 
 export default function Index() {
   const router = useRouter();
@@ -32,6 +32,7 @@ export default function Index() {
     try {
       // 1. Recebe o objeto do usuário logado do MySQL
       const usuario = await login({ email, password });
+      definirUsuarioAtual(usuario);
 
       // 2. Redireciona conforme o tipo de usuário cadastrado no banco
       if (usuario.tipo_usuario === "CLIENTE") {

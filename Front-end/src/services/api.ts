@@ -12,6 +12,20 @@ export type RegisteredUser = {
   token?: string;
 };
 
+let usuarioAtual: RegisteredUser | null = null;
+
+export function definirUsuarioAtual(usuario: RegisteredUser) {
+  usuarioAtual = usuario;
+}
+
+export function obterUsuarioAtual() {
+  return usuarioAtual;
+}
+
+export function limparUsuarioAtual() {
+  usuarioAtual = null;
+}
+
 export type RegisterInput = {
   nome: string;
   email: string;
@@ -49,9 +63,8 @@ export class ApiError extends Error {
   }
 }
 
-const apiUrl = (
-  process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api"
-).replace(/\/$/, "");
+// No Expo Go, localhost é o próprio celular, não o computador que executa a API.
+const apiUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
 
 function getApiUrl() {
   if (!apiUrl) {
@@ -83,10 +96,10 @@ async function request<T>(
         ? {}
         : { body: JSON.stringify(options.body) }),
     });
-  } catch (erro) {
-    console.log("URL chamada:", `${getApiUrl()}${path}`);
-    console.log("Erro original:", erro);
-    throw new ApiError("Não foi possível conectar à API.");
+  } catch {
+    throw new ApiError(
+      "Não foi possível conectar à API. Verifique se o servidor está em execução e se o celular está na mesma rede Wi-Fi.",
+    );
   }
 
   const payload = await response.json().catch(() => null);
@@ -129,12 +142,14 @@ export function recuperarSenha(input: RecuperarSenhaInput) {
   });
 }
 
-export function getUserProfile() {
-  return request<UserProfile>("/usuario/perfil");
+export function getUserProfile(usuarioId: number) {
+  return request<UserProfile>(`/usuario/perfil?usuario_id=${encodeURIComponent(usuarioId)}`);
 }
 
 export function logout() {
-  return request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
+  return request<{ sucesso: boolean }>("/auth/logout", { method: "POST" }).finally(
+    limparUsuarioAtual,
+  );
 }
 
 /* ==================== CATEGORIAS & PRESTADORES ==================== */
@@ -174,6 +189,10 @@ export function listarPrestadores() {
   return request<Prestador[]>("/prestadores");
 }
 
+export function listarPrestadoresPorCategoria(categoriaId: number) {
+  return request<Prestador[]>(`/prestadores/categoria/${encodeURIComponent(categoriaId)}`);
+}
+
 /* ==================== SOLICITAÇÕES ==================== */
 
 export type StatusSolicitacao =
@@ -211,7 +230,7 @@ export function criarSolicitacao(input: CriarSolicitacaoInput) {
 }
 
 export function listarMinhasSolicitacoes(clienteId: number) {
-  return request<Solicitacao[]>(`/solicitacoes?cliente_id=${clienteId}`);
+  return request<Solicitacao[]>(`/solicitacoes?cliente_id=${encodeURIComponent(clienteId)}`);
 }
 
 export function cancelarSolicitacao(id: number) {
@@ -267,5 +286,19 @@ export function salvarCartao(input: SalvarCartaoInput) {
 }
 
 export function listarCartoes(usuarioId: number) {
-  return request<CartaoUsuario[]>(`/pagamento/cartoes?usuario_id=${usuarioId}`);
+  return request<CartaoUsuario[]>(`/pagamento/cartoes?usuario_id=${encodeURIComponent(usuarioId)}`);
+}
+
+export function cobrarCartao(input: { transacao_id: number; metodo_pagamento: string }) {
+  return request<{ sucesso: boolean; mensagem?: string }>("/pagamento/cobrar", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function criarTransacao(solicitacaoId: number) {
+  return request<{ id: number; solicitacao_id: number; valor: number | string; status: string }>(
+    "/pagamento/transacoes",
+    { method: "POST", body: { solicitacao_id: solicitacaoId } },
+  );
 }

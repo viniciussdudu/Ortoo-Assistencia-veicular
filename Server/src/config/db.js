@@ -6,7 +6,8 @@ const db = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'ortoo_db',
-  port: process.env.DB_PORT || 3000,
+  // A porta 3000 é da API HTTP; MySQL usa 3306 por padrão.
+  port: Number(process.env.DB_PORT) || 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0

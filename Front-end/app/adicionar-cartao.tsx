@@ -14,9 +14,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api";
-const CLIENTE_ID = 1; // ID do usuário logado
+import { ApiError, obterUsuarioAtual, salvarCartao } from "../src/services/api";
 
 export default function AdicionarCartao() {
   const router = useRouter();
@@ -56,30 +54,23 @@ export default function AdicionarCartao() {
     setSalvando(true);
 
     try {
-      const response = await fetch(`${API_URL}/pagamento/salvar-cartao`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          usuario_id: CLIENTE_ID,
-          payment_method_id: `pm_simulated_${Date.now()}`,
-          ultimos_digitos: ultimosDigitos || "4242",
-          bandeira: "Visa",
-          validade_mes: Number(mes) || 12,
-          validade_ano: Number(`20${ano}`) || 2028,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        Alert.alert("Sucesso", "Cartão adicionado com sucesso!", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
-      } else {
-        Alert.alert("Erro", data.erro || "Não foi possível salvar o cartão.");
+      const usuario = obterUsuarioAtual();
+      if (!usuario) {
+        throw new ApiError("Sua sessão expirou. Entre novamente para adicionar um cartão.");
       }
+      await salvarCartao({
+        usuario_id: usuario.id,
+        payment_method_id: `pm_simulated_${Date.now()}`,
+        ultimos_digitos: ultimosDigitos || "4242",
+        bandeira: "Visa",
+        validade_mes: Number(mes) || 12,
+        validade_ano: Number(`20${ano}`) || 2028,
+      });
+      Alert.alert("Sucesso", "Cartão adicionado com sucesso!", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
     } catch (error) {
-      Alert.alert("Erro de Conexão", "Não foi possível se conectar ao servidor.");
+      Alert.alert("Erro", error instanceof ApiError ? error.message : "Não foi possível salvar o cartão.");
     } finally {
       setSalvando(false);
     }
