@@ -89,3 +89,34 @@ CREATE TABLE IF NOT EXISTS transacoes (
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (solicitacao_id) REFERENCES solicitacoes(id)
 );
+
+-- 8. Veículos do cliente
+CREATE TABLE IF NOT EXISTS veiculos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    tipo ENUM('CARRO','MOTO','BICICLETA','BIKE_ELETRICA','CAMINHAO') NOT NULL DEFAULT 'CARRO',
+    marca VARCHAR(50),
+    modelo VARCHAR(50) NOT NULL,
+    ano INT,
+    placa VARCHAR(10),
+    cor VARCHAR(30),
+    km_atual INT DEFAULT 0,
+    km_atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- 9. Manutenções registradas no veículo
+CREATE TABLE IF NOT EXISTS manutencoes_veiculo (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    veiculo_id INT NOT NULL,
+    solicitacao_id INT NULL,
+    tipo VARCHAR(50) NOT NULL,
+    descricao TEXT,
+    km_na_execucao INT,
+    custo DECIMAL(10,2),
+    executado_em DATE NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (veiculo_id) REFERENCES veiculos(id) ON DELETE CASCADE,
+    FOREIGN KEY (solicitacao_id) REFERENCES solicitacoes(id)
+);

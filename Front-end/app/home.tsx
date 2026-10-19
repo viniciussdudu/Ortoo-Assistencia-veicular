@@ -339,7 +339,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: CORES.texto,
-    ...Platform.select({ web: { outlineStyle: "none" } as any }),
   },
 
   secao: {
