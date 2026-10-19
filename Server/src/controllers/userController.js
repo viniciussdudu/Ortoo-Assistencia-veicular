@@ -2,10 +2,15 @@ const db = require("../config/db");
 
 async function getProfile(req, res, next) {
   try {
-    const usuarioId = req.query.usuario_id || req.userId || 1;
+    const usuarioId = req.userId;
+
+    if (!usuarioId) {
+      return res.status(401).json({ erro: "Usuário não autenticado." });
+    }
+
 
     const [usuarios] = await db.execute(
-      "SELECT id, nome, email, telefone, documento, tipo_documento, tipo_usuario, foto_url FROM usuarios WHERE id = ?",
+      "SELECT id, nome, email, telefone, documento, tipo_documento, tipo_usuario FROM usuarios WHERE id = ?",
       [usuarioId]
     );
 

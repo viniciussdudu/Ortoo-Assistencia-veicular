@@ -1,3 +1,5 @@
+import { limparToken, obterToken, salvarToken } from "./session";
+
 export type UserType = "CLIENTE" | "PRESTADOR_AUTONOMO" | "EMPRESA";
 export type TipoDocumento = "CPF" | "CNPJ";
 
@@ -97,12 +99,14 @@ async function request<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   let response: Response;
+  const token = await obterToken();
 
   try {
     response = await fetch(`${getApiUrl()}${path}`, {
       method: options.method ?? "GET",
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       ...(options.body === undefined
       ? {}
@@ -117,6 +121,10 @@ async function request<T>(
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
+    // Token enviado e recusado (expirado/inválido): descarta a credencial.
+    if (response.status === 401 && token && path !== "/auth/login") {
+      await limparToken();
+    }
     throw new ApiError(
       payload?.erro ?? "A API retornou um erro.",
       response.status,
@@ -135,13 +143,20 @@ export function register(input: RegisterInput) {
   });
 }
 
-export function login(
+export async function login(
   input: Pick<RegisterInput, "email" | "password">,
 ): Promise<RegisteredUser> {
-  return request<RegisteredUser>("/auth/login", {
+  const usuario = await request<RegisteredUser>("/auth/login", {
     method: "POST",
     body: input,
   });
+
+  if (!usuario.token) {
+    throw new ApiError("A API não retornou a credencial de acesso.");
+  }
+
+  await salvarToken(usuario.token);
+  return usuario;
 }
 
 export type RecuperarSenhaInput = {
@@ -171,8 +186,15 @@ export function updateUserProfile(input: UpdateProfileInput) {
   });
 }
 
-export function logout() {
-  return request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
+export async function logout(): Promise<{ sucesso: boolean }> {
+  try {
+    await request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
+  } catch {
+    // Mesmo sem rede, a sessão local precisa ser encerrada.
+  } finally {
+    await limparToken();
+  }
+  return { sucesso: true };
 }
 
 /* ==================== CATEGORIAS & PRESTADORES ==================== */
@@ -335,4 +357,14 @@ export function salvarCartao(input: SalvarCartaoInput) {
 
 export function listarCartoes(usuarioId: number) {
   return request<CartaoUsuario[]>(`/pagamento/cartoes?usuario_id=${usuarioId}`);
+}
+
+// O backend descobre o prestador pelo token; o app não envia prestador_id.
+export type CadastrarServicoInput = {
+  categoria_id: number;
+  preco_base: number;
+};
+
+export function cadastrarServico(input: CadastrarServicoInput) {
+  return request<ServicoOferecido>("/servicos", { method: "POST", body: input });
 }
