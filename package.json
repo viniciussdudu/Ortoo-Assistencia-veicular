@@ -1,4 +1,19 @@
 {
+  "name": "ortoo-project",
+  "private": true,
+  "engines": { "node": ">=20.19.4" },
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "install:all": "npm ci --prefix Front-end && npm ci --prefix Server",
+    "start": "npm --prefix Front-end run web",
+    "web": "npm --prefix Front-end run web",
+    "server": "npm --prefix Server start",
+    "db:import": "npm --prefix Server run db:import",
+    "lint": "npm --prefix Front-end run lint",
+    "typecheck": "npm --prefix Front-end run typecheck",
+    "build:web": "npm --prefix Front-end run build:web",
+    "test": "node --test Server/test/*.test.js Front-end/test/*.test.js"
+  },
   "dependencies": {
     "jsonwebtoken": "^9.0.3"
   }

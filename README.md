@@ -1,3 +1,57 @@
+# Como executar o projeto
+
+Requisitos: Git, Node.js 22 LTS com npm e MySQL 8 em execução. Use o repositório completo; a interface fica em `Front-end` e a API em `Server`.
+
+Na raiz do repositório, execute:
+
+```sh
+npm run setup
+npm run install:all
+```
+
+O setup cria `Server/.env` e `Front-end/.env` sem sobrescrever arquivos existentes e gera um `JWT_SECRET` aleatório para uma instalação nova. Se seu `.env` já existia, confira se contém um `JWT_SECRET` com pelo menos 32 caracteres. Para gerar um segredo: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+
+Edite `Server/.env` com o host, porta, usuário, senha e nome do banco MySQL (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`). O usuário precisa de permissão para criar o banco e as tabelas. Depois:
+
+```sh
+npm run db:import
+```
+
+A importação cria as tabelas e seis categorias básicas. Pode ser repetida sem duplicar categorias nem apagar contas. Não é um sistema de migrações: bancos antigos com estrutura diferente precisam ser atualizados separadamente. O arquivo `seed_dev.sql` contém exemplos com senhas placeholder; não é necessário importá-lo. Cadastre uma conta pela interface.
+
+Abra dois terminais na raiz:
+
+```sh
+# Terminal 1: API
+npm run server
+```
+
+```sh
+# Terminal 2: interface web
+npm run web
+```
+
+Abra o endereço informado pelo Expo, normalmente [http://localhost:8081](http://localhost:8081). Confira a conexão com o banco em [http://localhost:3001/api/status](http://localhost:3001/api/status). Para abrir só a tela de login, basta executar a interface; cadastro, login e demais dados exigem API e MySQL.
+
+Em `Front-end/.env`, `EXPO_PUBLIC_API_URL=http://localhost:3001/api` funciona no navegador da máquina que executa a API. Para outro computador ou celular na mesma rede, use o IPv4 da máquina da API (por exemplo, `http://192.168.1.50:3001/api`), libere as portas necessárias no firewall e reinicie o Expo após mudar o `.env`. `localhost` sempre aponta para o próprio dispositivo. Para o celular, execute `npm --prefix Front-end start` e utilize um cliente compatível com Expo SDK 54 ou uma development build. A geolocalização web precisa de permissão e de HTTPS ou localhost; acesso por IP via HTTP pode bloquear o GPS.
+
+Pagamentos são opcionais para iniciar o projeto. Para cadastrar cartões no Android/iOS, configure `STRIPE_SECRET_KEY` no servidor e `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` no frontend com chaves de teste da mesma conta Stripe. O SDK React Native do Stripe atende Android/iOS; o cadastro de cartões pelo navegador ainda precisa de uma integração Stripe para web. Sem as chaves, as outras telas continuam disponíveis.
+
+Para validação e geração da versão web:
+
+```sh
+npm run typecheck
+npm run lint
+npm test
+npm run build:web
+```
+
+Os arquivos estáticos são gerados em `Front-end/dist`. Para acesso público, hospede esses arquivos com HTTPS e disponibilize a API com HTTPS e banco acessível somente pelo servidor. Configure a URL pública da API antes de gerar o build; variáveis `EXPO_PUBLIC_*` ficam visíveis no navegador e nunca devem conter segredos. A publicação exige também revisar os fluxos ainda provisórios de identificação do cliente e recuperação de senha.
+
+Referência do projeto: [documentação do Expo SDK 54](https://docs.expo.dev/versions/v54.0.0/).
+
+---
+
 # Projeto de Sistemas - 2026.2 | Universidade Federal do Tocantins - Palmas
 
 ### Curso: Bacharelado em Ciência da Computação

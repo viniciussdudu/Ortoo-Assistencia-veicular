@@ -1,11 +1,10 @@
-import * as Location from "expo-location";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
-  BackHandler,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,12 +15,16 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { ShowAlert } from "@/components/alert";
 import MapaTempoReal from "../components/(componentes-mapas)/MapaTempoReal";
+import { LocationWatcher, watchLocation } from "../src/services/location-watcher";
 
 // Importações centralizadas do arquivo de serviços
 import {
   cancelarSolicitacao,
   CartaoUsuario,
   criarSolicitacao,
+  getApiUrl,
+  getUserProfile,
+  iniciarConversa,
   listarCartoes,
   listarMinhasSolicitacoes,
   Prestador,
@@ -29,13 +32,12 @@ import {
 
 // TODO: substituir pelo ID do usuário logado na sessão real
 const CLIENTE_ID = 1;
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api";
 
 export default function TelaMapa() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const { categoria_id } = useLocalSearchParams<{ categoria_id: string }>();
+  const { categoria_id, solicitacao_id } = useLocalSearchParams<{ categoria_id: string; solicitacao_id?: string }>();
 
   const [clienteCoords, setClienteCoords] = useState<{
     latitude: number;
@@ -44,98 +46,106 @@ export default function TelaMapa() {
 
   const [erroGps, setErroGps] = useState<string | null>(null);
 
-  const [solicitacaoId, setSolicitacaoId] = useState<number | null>(null);
+  const idInicial = Number(solicitacao_id);
+  const [solicitacaoId, setSolicitacaoId] = useState<number | null>(
+    Number.isInteger(idInicial) && idInicial > 0 ? idInicial : null,
+  );
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
   const [carregandoPrestadores, setCarregandoPrestadores] = useState(true);
   const [prestadorSelecionado, setPrestadorSelecionado] = useState<Prestador | null>(null);
 
   // Referência mutável para acessar o ID da solicitação atualizado no cleanup de desmontagem
-  const solicitacaoIdRef = useRef<number | null>(null);
+  const solicitacaoIdRef = useRef<number | null>(solicitacaoId);
+  const voltandoRef = useRef(false);
+  const preservarSolicitacaoRef = useRef(false);
+  const [abrindoChat, setAbrindoChat] = useState(false);
+  const chatLock = useRef(false);
 
-  useEffect(() => {
-    solicitacaoIdRef.current = solicitacaoId;
-  }, [solicitacaoId]);
-
-  // 1. CANCELAMENTO AUTOMÁTICO NA DESMONTAGEM DA TELA (Ao sair do Mapa por qualquer via)
-  useEffect(() => {
-    return () => {
-      if (solicitacaoIdRef.current) {
-        const idParaCancelar = solicitacaoIdRef.current;
-        cancelarSolicitacao(idParaCancelar)
-          .then(() => console.log(`✅ Solicitação ${idParaCancelar} cancelada automaticamente ao sair da tela.`))
-          .catch((err) => console.error("Erro ao cancelar solicitação ao sair:", err));
-      }
-    };
+  const atualizarSolicitacaoId = useCallback((id: number | null) => {
+    solicitacaoIdRef.current = id;
+    setSolicitacaoId(id);
   }, []);
 
-  // 2. TRATAMENTO DO BOTÃO VOLTAR FÍSICO / GESTOS DO DISPOSITIVO
-  useEffect(() => {
-    const onBackPress = () => {
-      if (solicitacaoId) {
-        cancelarSolicitacao(solicitacaoId)
-          .then(() => console.log("✅ Solicitação cancelada via botão voltar físico/gesto."))
-          .catch((err) => console.error("Erro ao cancelar via botão físico:", err));
-      }
-      return false; // Permite que a navegação do sistema continue normalmente
-    };
+  // Retira o ID antes da requisição: voltar e perder foco não cancelam duas vezes.
+  const cancelarAoSair = useCallback(async () => {
+    const id = solicitacaoIdRef.current;
+    if (!id) return;
+    solicitacaoIdRef.current = null;
+    try {
+      await cancelarSolicitacao(id);
+    } catch (error) {
+      solicitacaoIdRef.current = id;
+      throw error;
+    }
+  }, []);
 
-    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-    return () => subscription.remove();
-  }, [solicitacaoId]);
+  // Cobre o voltar da interface, do navegador e do dispositivo.
+  useFocusEffect(useCallback(() => {
+    voltandoRef.current = false;
+    preservarSolicitacaoRef.current = false;
+    return () => {
+      if (preservarSolicitacaoRef.current) return;
+      void cancelarAoSair().catch((error) => {
+        console.warn("Não foi possível cancelar a solicitação ao sair do mapa:", error);
+      });
+    };
+  }, [cancelarAoSair]));
 
   // Função para ação do botão Voltar da interface (UI)
   const handleVoltar = async () => {
-    if (solicitacaoId) {
-      try {
-        await cancelarSolicitacao(solicitacaoId);
-        console.log("✅ Solicitação cancelada com sucesso antes de sair.");
-      } catch (err) {
-        console.error("Erro ao cancelar solicitação ao voltar:", err);
-      } finally {
-        setSolicitacaoId(null);
-      }
+    if (voltandoRef.current) return;
+    voltandoRef.current = true;
+    try {
+      await cancelarAoSair();
+      atualizarSolicitacaoId(null);
+      if (router.canGoBack()) router.back();
+      else router.replace("/home");
+    } catch (error) {
+      voltandoRef.current = false;
+      ShowAlert("Não foi possível voltar", error instanceof Error ? error.message : "Tente novamente.");
     }
-    router.back();
   };
 
   // 3. Monitoramento do GPS do Cliente
-  useEffect(() => {
-    let inscricaoGPS: Location.LocationSubscription | null = null;
+  useFocusEffect(useCallback(() => {
+    let inscricaoGPS: LocationWatcher | null = null;
+    let ativo = true;
 
     async function iniciarMonitoramentoGPS() {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== "granted") {
-        setErroGps("Permissão de localização negada.");
-        return;
+      try {
+        const inscricao = await watchLocation(
+          (coordinates) => {
+            if (!ativo) return;
+            setErroGps(null);
+            setClienteCoords({
+              latitude: coordinates.latitude,
+              longitude: coordinates.longitude,
+            });
+          },
+          (mensagem) => { if (ativo) setErroGps(mensagem); }
+        );
+        // A assinatura pode terminar de iniciar depois que o usuário já saiu.
+        if (ativo) inscricaoGPS = inscricao;
+        else inscricao.remove();
+      } catch (error) {
+        if (ativo) setErroGps(error instanceof Error ? error.message : "Não foi possível obter sua localização.");
       }
-
-      inscricaoGPS = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 3000,
-          distanceInterval: 5,
-        },
-        (location) => {
-          setClienteCoords({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          });
-        }
-      );
     }
 
     iniciarMonitoramentoGPS();
 
     return () => {
+      ativo = false;
       if (inscricaoGPS) {
         inscricaoGPS.remove();
       }
     };
-  }, []);
+  }, []));
 
   // 4. Busca Prestadores no Backend
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    let ativo = true;
+    const controller = new AbortController();
     async function buscarPrestadores() {
       if (!categoria_id) {
         setCarregandoPrestadores(false);
@@ -144,8 +154,9 @@ export default function TelaMapa() {
 
       try {
         setCarregandoPrestadores(true);
-        const response = await fetch(`${API_URL}/prestadores/categoria/${categoria_id}`);
+        const response = await fetch(`${getApiUrl()}/prestadores/categoria/${categoria_id}`, { signal: controller.signal });
         const data = await response.json();
+        if (!ativo) return;
 
         if (response.ok) {
           setPrestadores(data);
@@ -156,14 +167,15 @@ export default function TelaMapa() {
           Alert.alert("Erro", data.erro || "Falha ao buscar prestadores disponíveis.");
         }
       } catch (error) {
-        console.error("Erro ao buscar prestadores:", error);
+        if (ativo) ShowAlert("Erro ao buscar prestadores", error instanceof Error ? error.message : "Tente novamente.");
       } finally {
-        setCarregandoPrestadores(false);
+        if (ativo) setCarregandoPrestadores(false);
       }
     }
 
     buscarPrestadores();
-  }, [categoria_id]);
+    return () => { ativo = false; controller.abort(); };
+  }, [categoria_id]));
 
   // MEMOIZAÇÃO DA LOCALIZAÇÃO DO MECÂNICO
   const mecanicoLocation = useMemo(() => {
@@ -179,9 +191,9 @@ export default function TelaMapa() {
     return {
       latitude: lat,
       longitude: lng,
-      headin: 0,
+      heading: 0,
     };
-  }, [prestadorSelecionado?.latitude_atual, prestadorSelecionado?.longitude_atual]);
+  }, [prestadorSelecionado]);
 
   // Configurando a tela de pagamentos
   const [cartoes, setCartoes] = useState<CartaoUsuario[]>([]);
@@ -196,30 +208,33 @@ export default function TelaMapa() {
       damping: 18,
       stiffness: 160,
       mass: 0.8,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
     }).start();
   }, [barraPagamento, mostrarPagamentos]);
 
   // Lógica para listar todos os cartões do usuário usando o api.ts
   useEffect(() => {
+    if (!mostrarPagamentos) return;
+    let ativo = true;
     async function buscarCartoes() {
       try {
         setCarregandoCartoes(true);
         const data = await listarCartoes(CLIENTE_ID);
-        setCartoes(data);
+        if (ativo) setCartoes(data);
       } catch (error) {
-        console.error("Erro ao buscar cartões:", error);
+        if (ativo) ShowAlert("Erro ao buscar cartões", error instanceof Error ? error.message : "Tente novamente.");
       } finally {
-        setCarregandoCartoes(false);
+        if (ativo) setCarregandoCartoes(false);
       }
     }
 
     buscarCartoes();
-  }, []);
+    return () => { ativo = false; };
+  }, [mostrarPagamentos]);
 
   // Envia a cobrança incluindo o método de pagamento selecionado
   async function realizarPagamento(transacaoId: number, metodo: string) {
-    const response = await fetch(`${API_URL}/pagamento/cobrar`, {
+    const response = await fetch(`${getApiUrl()}/pagamento/cobrar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -235,6 +250,30 @@ export default function TelaMapa() {
   }
 
   // Função disparada ao clicar no botão 'Chamar'
+  async function abrirChat(item: Prestador) {
+    if (chatLock.current) return;
+    chatLock.current = true;
+    setAbrindoChat(true);
+    try {
+      let id = solicitacaoIdRef.current;
+      if (!id) {
+        if (!clienteCoords) throw new Error("Aguarde sua localização para iniciar um atendimento.");
+        const usuario = await getUserProfile();
+        const nova = await criarSolicitacao({ cliente_id: usuario.id, categoria_id: Number(categoria_id), latitude_origem: clienteCoords.latitude, longitude_origem: clienteCoords.longitude, descricao_problema: "Solicitação via mapa" });
+        id = nova.id;
+        atualizarSolicitacaoId(id);
+      }
+      const providerId = item.id || (item as Prestador & { prestador_id: number }).prestador_id;
+      await iniciarConversa(id, providerId);
+      // Abrir a conversa mantém o atendimento ativo ao perder o foco do mapa.
+      preservarSolicitacaoRef.current = true;
+      router.push({ pathname: "/chat", params: { id } });
+    } catch (error) {
+      preservarSolicitacaoRef.current = false;
+      ShowAlert("Não foi possível abrir a conversa", error instanceof Error ? error.message : "Tente novamente.");
+    } finally { chatLock.current = false; setAbrindoChat(false); }
+  }
+
   async function handleChamarPrestador(item: Prestador) {
     const prestadorId = item.id || (item as any).prestador_id;
     console.log("👉 Botão Chamar clicado para o prestador:", prestadorId);
@@ -243,6 +282,11 @@ export default function TelaMapa() {
 
     if (!clienteCoords) {
       ShowAlert("Atenção", "Obtendo localização do GPS...");
+      return;
+    }
+
+    if (solicitacaoIdRef.current) {
+      setMostrarPagamentos(true);
       return;
     }
 
@@ -257,7 +301,7 @@ export default function TelaMapa() {
       });
 
       if (novaSolicitacao?.id) {
-        setSolicitacaoId(novaSolicitacao.id);
+        atualizarSolicitacaoId(novaSolicitacao.id);
         setMostrarPagamentos(true);
         console.log("✅ Nova solicitação criada. ID:", novaSolicitacao.id);
       }
@@ -278,7 +322,7 @@ export default function TelaMapa() {
           );
 
           if (ativa?.id) {
-            setSolicitacaoId(ativa.id);
+            atualizarSolicitacaoId(ativa.id);
             setMostrarPagamentos(true);
             console.log("🔄 Solicitação ativa recuperada. ID:", ativa.id);
             return;
@@ -304,7 +348,7 @@ export default function TelaMapa() {
     setProcessandoPagamento(true);
 
     try {
-      const response = await fetch(`${API_URL}/pagamento/transacoes`, {
+      const response = await fetch(`${getApiUrl()}/pagamento/transacoes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -322,7 +366,7 @@ export default function TelaMapa() {
       setMostrarPagamentos(false);
       
       // Limpa a solicitação do estado local após o pagamento concluído
-      setSolicitacaoId(null);
+      atualizarSolicitacaoId(null);
       Alert.alert("Sucesso", "Pagamento realizado com sucesso!");
     } catch (error) {
       Alert.alert(
@@ -340,6 +384,9 @@ export default function TelaMapa() {
         <Stack.Screen options={{ headerShown: false }} />
         <ActivityIndicator size="large" color="#fcf7f7" />
         <Text style={styles.textoCarregando}>Obtendo sua localização...</Text>
+        <TouchableOpacity style={styles.botaoVoltar} onPress={handleVoltar}>
+          <Text style={styles.voltarTexto}>{"<"} Voltar</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -366,6 +413,8 @@ export default function TelaMapa() {
         >
           <Text style={styles.voltarTexto}>{"<"} Voltar</Text>
         </TouchableOpacity>
+
+        {erroGps && <Text accessibilityRole="alert" style={styles.textoVazio}>{erroGps}</Text>}
 
         <View style={[styles.painelInferior, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <Text style={styles.tituloPainel}>Empresas Disponíveis</Text>
@@ -413,6 +462,13 @@ export default function TelaMapa() {
                       disabled={processandoPagamento}
                     >
                       <Text style={styles.textoBotao}>Chamar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.botaoChamar, { marginTop: 8, backgroundColor: "#0f766e" }]}
+                      onPress={() => abrirChat(item)} disabled={abrindoChat || processandoPagamento}
+                      accessibilityRole="button" accessibilityLabel={`Conversar com prestador ${item.nome_fantasia || item.nome || itemId}`}
+                    >
+                      <Text style={styles.textoBotao}>{abrindoChat ? "Abrindo conversa…" : "Conversar com prestador"}</Text>
                     </TouchableOpacity>
                   </View>
                 );

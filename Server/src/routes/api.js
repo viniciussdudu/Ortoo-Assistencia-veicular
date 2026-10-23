@@ -10,6 +10,12 @@ const paymentController = require("../controllers/paymentController");
 const veiculoController = require("../controllers/veiculoController");
 
 const router = express.Router();
+const chatController = require('../controllers/chatController');
+
+router.get('/conversas', requireAuth, chatController.listar);
+router.post('/solicitacoes/:id/conversa', requireAuth, chatController.iniciar);
+router.get('/solicitacoes/:id/mensagens', requireAuth, chatController.mensagens);
+router.post('/solicitacoes/:id/mensagens', requireAuth, chatController.enviar);
 
 // Rota de Status da API
 router.get("/status", async (req, res) => {
@@ -33,6 +39,7 @@ router.post("/auth/recuperar-senha", authController.recuperarSenha);
 
 // Rotas de Usuário / Perfil
 router.get("/usuario/perfil", requireAuth, userController.getProfile);
+router.put("/usuario/perfil", requireAuth, userController.updateProfile);
 
 // Rotas de Solicitações e Categorias
 router.get("/categorias", solicitacaoController.listarCategorias);

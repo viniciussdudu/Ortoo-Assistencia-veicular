@@ -1,5 +1,5 @@
 -- 1. Tabela de Usuários (Clientes, Autônomos e Empresas)
-CREATE TABLE usuarios (
+CREATE TABLE IF NOT EXISTS usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     stripe_customer_id VARCHAR(255),
     nome VARCHAR(100) NOT NULL,
@@ -59,6 +59,17 @@ CREATE TABLE IF NOT EXISTS solicitacoes (
     FOREIGN KEY (cliente_id) REFERENCES usuarios(id),
     FOREIGN KEY (prestador_id) REFERENCES perfis_prestadores(id),
     FOREIGN KEY (categoria_id) REFERENCES categorias_servico(id)
+);
+
+CREATE TABLE IF NOT EXISTS mensagens_chat (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    solicitacao_id INT NOT NULL,
+    remetente_id INT NOT NULL,
+    conteudo TEXT NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_mensagens_chat_solicitacao_data (solicitacao_id, criado_em),
+    FOREIGN KEY (solicitacao_id) REFERENCES solicitacoes(id) ON DELETE CASCADE,
+    FOREIGN KEY (remetente_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
 -- 6. Cartões do Usuário usando Stripe

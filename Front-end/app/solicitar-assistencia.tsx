@@ -78,7 +78,7 @@ export default function SolicitarAssistencia() {
     setEnviando(true);
     try {
       const usuario = await getUserProfile();
-      await criarSolicitacao({
+      const solicitacao = await criarSolicitacao({
         cliente_id: usuario.id,
         categoria_id: categoriaId,
         descricao_problema: descricao.trim() || undefined,
@@ -89,7 +89,7 @@ export default function SolicitarAssistencia() {
       // Redireciona diretamente para o mapa com a categoria selecionada
       router.push({
         pathname: "/mapa",
-        params: { categoria_id: categoriaId },
+        params: { categoria_id: categoriaId, solicitacao_id: solicitacao.id },
       });
     } catch (erro) {
       Alert.alert("Erro", erro instanceof ApiError ? erro.message : "Falha ao enviar a solicitação.");

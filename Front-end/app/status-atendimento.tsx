@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +18,7 @@ import {
   SolicitacaoStatus,
 } from "../src/services/api";
 
-const ETAPAS: Array<{ key: SolicitacaoStatus; label: string; icone: string }> = [
+const ETAPAS: { key: SolicitacaoStatus; label: string; icone: string }[] = [
   { key: "PENDENTE", label: "Aguardando confirmação", icone: "clock-outline" },
   { key: "ACEITO", label: "Aceito pelo mecânico", icone: "check-circle-outline" },
   { key: "A_CAMINHO", label: "Mecânico a caminho", icone: "car-tow-truck" },
@@ -36,15 +36,7 @@ export default function StatusAtendimento() {
 
   const isMecanico = modo === "mecanico";
 
-  // Polling a cada 3 segundos para sincronizar em tempo real
-  useEffect(() => {
-    if (!id) return;
-    carregarDados();
-    const interval = setInterval(carregarDados, 3000);
-    return () => clearInterval(interval);
-  }, [id]);
-
-  async function carregarDados() {
+  const carregarDados = useCallback(async () => {
     try {
       const data = await buscarSolicitacaoPorId(Number(id));
       setSolicitacao(data);
@@ -53,7 +45,15 @@ export default function StatusAtendimento() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, [id]);
+
+  // Polling a cada 3 segundos para sincronizar em tempo real
+  useEffect(() => {
+    if (!id) return;
+    carregarDados();
+    const interval = setInterval(carregarDados, 3000);
+    return () => clearInterval(interval);
+  }, [id, carregarDados]);
 
   async function alterarStatus(novoStatus: SolicitacaoStatus) {
     if (!solicitacao) return;
@@ -70,7 +70,7 @@ export default function StatusAtendimento() {
           },
         ]);
       }
-    } catch (error) {
+    } catch {
       Alert.alert("Erro", "Não foi possível atualizar o status.");
     } finally {
       setAtualizando(false);
@@ -99,6 +99,8 @@ export default function StatusAtendimento() {
 
       <Text style={styles.titulo}>Acompanhamento do Atendimento</Text>
       <Text style={styles.subtitulo}>Solicitação #{solicitacao.id}</Text>
+
+      {!!solicitacao.prestador_id && <TouchableOpacity style={styles.botaoAcao} onPress={() => router.push({ pathname: "/chat", params: { id: solicitacao.id } })} accessibilityRole="button"><Text style={styles.botaoAcaoTexto}>{isMecanico ? "Conversar com cliente" : "Conversar com prestador"}</Text></TouchableOpacity>}
 
       {/* TIMELINE DE STATUS */}
       <View style={styles.timeline}>

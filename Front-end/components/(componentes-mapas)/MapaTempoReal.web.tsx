@@ -4,16 +4,6 @@ import { MapaTempoRealProps } from "./types";
 
 
 
-interface Coordenada {
-  latitude: number;
-  longitude: number;
-}
-
-interface Props {
-  clienteLocation: Coordenada;
-  mecanicoLocation: Coordenada & { heading?: number };
-}
-
 export default function MapaTempoReal({
   clienteLocation,
   mecanicoLocation,

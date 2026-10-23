@@ -10,7 +10,7 @@ async function getProfile(req, res, next) {
 
 
     const [usuarios] = await db.execute(
-      "SELECT id, nome, email, telefone, documento, tipo_documento, tipo_usuario FROM usuarios WHERE id = ?",
+      "SELECT id, nome, email, telefone, documento, tipo_documento, tipo_usuario, foto_url FROM usuarios WHERE id = ?",
       [usuarioId]
     );
 
@@ -81,9 +81,10 @@ async function updateProfile(req, res, next) {
     return res.status(400).json({ erro: "Nome e telefone são obrigatórios." });
   }
 
-  const connection = await db.getConnection();
+  let connection;
 
   try {
+    connection = await db.getConnection();
     await connection.beginTransaction();
 
     // 1. Atualiza dados comuns na tabela usuarios
@@ -123,10 +124,10 @@ async function updateProfile(req, res, next) {
       mensagem: "Perfil atualizado com sucesso!",
     });
   } catch (error) {
-    await connection.rollback();
+    if (connection) await connection.rollback();
     return next(error);
   } finally {
-    connection.release();
+    if (connection) connection.release();
   }
 }
 

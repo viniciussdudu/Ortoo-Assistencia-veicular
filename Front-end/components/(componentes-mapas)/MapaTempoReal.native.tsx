@@ -92,12 +92,7 @@ export default function MapaTempoReal({
         setRotaCoords([mecanicoLocation, clienteLocation]);
       }
     }
-  }, [
-    clienteLocation.latitude,
-    clienteLocation.longitude,
-    mecanicoLocation?.latitude,
-    mecanicoLocation?.longitude,
-  ]);
+  }, [clienteLocation, mecanicoLocation]);
 
   // 2. Efeito focado EXCLUSIVAMENTE em buscar a rota quando as posições mudam
   useEffect(() => {
@@ -136,11 +131,9 @@ export default function MapaTempoReal({
     }
   }, [
     isMapReady,
-    clienteLocation.latitude,
-    clienteLocation.longitude,
-    mecanicoLocation?.latitude,
-    mecanicoLocation?.longitude,
-    rotaCoords.length, // Dependência primitiva para evitar loops com a referência do array
+    clienteLocation,
+    mecanicoLocation,
+    rotaCoords,
   ]);
 
   return (

@@ -328,6 +328,23 @@
             </View>
           )}
 
+          <View style={styles.secaoContainer}>
+            <Text style={styles.secaoTitulo}>Assistência do veículo</Text>
+            <TouchableOpacity
+              style={styles.cardBotao}
+              onPress={() => router.push("/veiculo")}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Acessar assistência do veículo"
+            >
+              <View style={styles.cardHeader}>
+                <MaterialCommunityIcons name="car-wrench" size={22} color={CORES.destaque} />
+                <Text style={styles.cardBotaoTexto}>Assistência do veículo</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={CORES.textoSuave} />
+            </TouchableOpacity>
+          </View>
+
           {/* FORMAS DE PAGAMENTO */}
           <View style={styles.secaoContainer}>
           <Text style={styles.secaoTitulo}>Formas de Pagamento</Text>

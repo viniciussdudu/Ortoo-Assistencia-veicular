@@ -324,6 +324,11 @@ export default function Mecanico() {
           </>
         )}
 
+        <TouchableOpacity style={styles.cardBotao} onPress={() => router.push("/conversas")} accessibilityRole="button">
+          <View style={styles.cardHeader}><MaterialCommunityIcons name="chat-outline" size={22} color={CORES.destaque} /><Text style={styles.cardBotaoTexto}>Conversas com clientes</Text></View>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={CORES.textoSuave} />
+        </TouchableOpacity>
+
         {/* SAIR */}
         <TouchableOpacity
           style={[styles.botaoSair, saindo && styles.botaoSairDesabilitado]}

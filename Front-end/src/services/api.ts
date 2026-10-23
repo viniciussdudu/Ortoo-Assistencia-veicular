@@ -51,7 +51,7 @@ export type UserProfile = {
   criado_em?: string;
   prestador?: PerfilPrestador | null;
   veiculo?: { modelo: string; placa: string; cor: string } | null;
-  historico?: Array<{ id: number; data: string; problema: string; status: string }>;
+  historico?: { id: number; data: string; problema: string; status: string }[];
 };
 
 export type UpdateProfileInput = {
@@ -78,7 +78,7 @@ export class ApiError extends Error {
 
 const apiUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
 
-function getApiUrl() {
+export function getApiUrl() {
   if (!apiUrl) {
     throw new ApiError(
       "A API não foi configurada. Crie um arquivo .env a partir de .env.example.",
@@ -98,9 +98,10 @@ async function request<T>(
 ): Promise<T> {
   let response: Response;
   const token = await obterToken();
+  const url = `${getApiUrl()}${path}`;
 
   try {
-    response = await fetch(`${getApiUrl()}${path}`, {
+    response = await fetch(url, {
       method: options.method ?? "GET",
       headers: {
         "Content-Type": "application/json",
@@ -111,7 +112,7 @@ async function request<T>(
       : { body: JSON.stringify(options.body) }),
     });
   } catch {
-    throw new ApiError("Não foi possível conectar à API. Verifique se o servidor está em execução e se o celular está na mesma rede Wi-Fi.");
+    throw new ApiError(`Não foi possível conectar à API em ${getApiUrl()}. Verifique se o servidor está em execução e se EXPO_PUBLIC_API_URL usa o IP atual da máquina. Após alterar o .env, reinicie o Expo.`);
   }
 
   const payload = await response.json().catch(() => null);
@@ -287,6 +288,21 @@ export function cancelarSolicitacao(id: number) {
 
 export function listarSolicitacoesPendentes() {
   return request<Solicitacao[]>("/solicitacoes/pendentes");
+}
+
+export type MensagemChat = { id: number; remetente_id: number; conteudo: string; criado_em: string };
+export type Conversa = {
+  id: number; cliente_id: number; prestador_id: number; prestador_usuario_id: number;
+  cliente_nome: string; prestador_nome: string; status: SolicitacaoStatus; meu_id: number;
+};
+export type Chat = Conversa & { mensagens: MensagemChat[] };
+export function listarConversas() { return request<Conversa[]>("/conversas"); }
+export function iniciarConversa(id: number, prestadorId: number) {
+  return request<{ id: number }>(`/solicitacoes/${id}/conversa`, { method: "POST", body: { prestador_id: prestadorId } });
+}
+export function obterChat(id: number) { return request<Chat>(`/solicitacoes/${id}/mensagens`); }
+export function enviarMensagem(id: number, conteudo: string) {
+  return request<{ id: number }>(`/solicitacoes/${id}/mensagens`, { method: "POST", body: { conteudo } });
 }
 
 export function buscarSolicitacaoPorId(id: number) {

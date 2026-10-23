@@ -2,7 +2,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
 const { secret, expiresIn } = require("../config/jwt");
-const { errors } = require("../config/stripe");
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -69,6 +68,10 @@ function validateRegistration(body) {
   const isCnpj = cleanDoc.length === 14;
   const isCpf = cleanDoc.length === 11;
 
+  if (!isCpf && !isCnpj) {
+    return { error: "Informe um CPF ou CNPJ válido." };
+  }
+
   if (tipo_usuario === "EMPRESA" && !isCnpj) {
     return { error: "Empresas devem cadastrar um CNPJ com 14 dígitos." };
   }
@@ -109,9 +112,10 @@ async function register(req, res, next) {
     return res.status(400).json({ erro: data.error });
   }
 
-  const connection = await db.getConnection();
+  let connection;
 
   try {
+    connection = await db.getConnection();
     await connection.beginTransaction();
 
     const senhaHash = await bcrypt.hash(data.password, 12);
@@ -157,7 +161,7 @@ async function register(req, res, next) {
       tipo_usuario: data.tipo_usuario,
     });
   } catch (error) {
-    await connection.rollback();
+    if (connection) await connection.rollback();
 
     if (error.code === "ER_DUP_ENTRY") {
       return res
@@ -167,7 +171,7 @@ async function register(req, res, next) {
 
     return next(error);
   } finally {
-    connection.release();
+    if (connection) connection.release();
   }
 }
 

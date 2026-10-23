@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Modal,
@@ -17,12 +17,10 @@ import {
     Manutencao,
     VeiculoDetalhado,
     atualizarQuilometragem,
+    getUserProfile,
     listarVeiculos,
     obterVeiculo,
 } from "../src/services/api";
-
-// TODO: trocar pelo id do usuario logado quando houver sessao real.
-const CLIENTE_ID = 1;
 
 const CORES = {
   fundo: "#F3EBDA",
@@ -165,18 +163,15 @@ export default function PerfilVeiculo() {
   const [erroKm, setErroKm] = useState<string | null>(null);
   const [aberto, setAberto] = useState<string | null>(null);
 
-  useEffect(() => {
-    carregar();
-  }, [params.id]);
-
-  async function carregar() {
+  const carregar = useCallback(async () => {
     try {
       setCarregando(true);
       setErro(null);
 
       let id = params.id ? Number(params.id) : null;
       if (!id) {
-        const lista = await listarVeiculos(CLIENTE_ID);
+        const usuario = await getUserProfile();
+        const lista = await listarVeiculos(usuario.id);
         if (lista.length === 0) {
           setVeiculo(null);
           setCarregando(false);
@@ -193,7 +188,11 @@ export default function PerfilVeiculo() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, [params.id]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
   async function salvarKm() {
     const km = Number(novoKm.replace(/\D/g, ""));
@@ -251,6 +250,9 @@ export default function PerfilVeiculo() {
           color={CORES.textoSuave}
         />
         <Text style={styles.tituloVazio}>Nenhum veículo cadastrado</Text>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace("/perfil")} accessibilityRole="button">
+          <Text style={styles.textoVazio}>Voltar ao perfil</Text>
+        </TouchableOpacity>
         <Text style={styles.textoVazio}>
           Cadastre seu veículo para acompanhar manutenções e histórico.
         </Text>

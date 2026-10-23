@@ -10,10 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { ApiError, TipoVeiculo, criarVeiculo } from "../src/services/api";
-
-// TODO: trocar pelo id do usuario logado quando houver sessao real.
-const CLIENTE_ID = 1;
+import { ApiError, TipoVeiculo, criarVeiculo, getUserProfile } from "../src/services/api";
 
 const CORES = {
   fundo: "#F3EBDA",
@@ -80,8 +77,9 @@ export default function CadastrarVeiculo() {
     setSalvando(true);
     setErro(null);
     try {
+      const usuario = await getUserProfile();
       const veiculo = await criarVeiculo({
-        usuario_id: CLIENTE_ID,
+        usuario_id: usuario.id,
         tipo,
         marca: marca.trim() || undefined,
         modelo: modelo.trim(),

@@ -23,7 +23,8 @@ export default function Atendimentos() {
   const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(async (pullToRefresh = false) => {
-    pullToRefresh ? setAtualizando(true) : setCarregando(true);
+    if (pullToRefresh) setAtualizando(true);
+    else setCarregando(true);
     try {
       setErro(null);
       const usuario = await getUserProfile();

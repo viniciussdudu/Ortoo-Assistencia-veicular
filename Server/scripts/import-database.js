@@ -1,7 +1,6 @@
-require('dotenv').config();
-
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const mysql = require('mysql2/promise');
 
 async function importDatabase() {
@@ -26,6 +25,21 @@ async function importDatabase() {
     const schemaPath = path.join(__dirname, '..', 'database', 'ortoo_db.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
     await connection.query(schema);
+
+    // Categorias básicas sem criar contas de teste nem duplicar registros.
+    for (const [nome, descricao] of [
+      ['Pane seca', 'Entrega de combustível no local'],
+      ['Bateria', 'Recarga ou troca de bateria'],
+      ['Pneu', 'Troca de pneu ou reparo'],
+      ['Chaveiro', 'Abertura de veículo e chaves'],
+      ['Reboque', 'Remoção do veículo'],
+      ['Mecânica leve', 'Reparo rápido no local'],
+    ]) {
+      await connection.execute(
+        'INSERT INTO categorias_servico (nome, descricao) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM categorias_servico WHERE nome = ?)',
+        [nome, descricao, nome],
+      );
+    }
 
     const [tables] = await connection.query('SHOW TABLES');
     console.log(`Banco ${database} importado. Tabelas: ${tables.map((row) => Object.values(row)[0]).join(', ')}`);

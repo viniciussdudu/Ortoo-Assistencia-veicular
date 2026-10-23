@@ -3,7 +3,6 @@ import { Stack, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -120,6 +119,12 @@ export default function Home() {
               </TouchableOpacity>
             </View>
           </View>
+
+          <TouchableOpacity style={styles.conversas} onPress={() => router.push("/conversas")} accessibilityRole="button">
+            <MaterialCommunityIcons name="chat-outline" size={22} color={CORES.destaque} />
+            <Text style={styles.conversasTexto}>Conversas com prestadores</Text>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={CORES.textoSuave} />
+          </TouchableOpacity>
 
           {/* TITULO */}
           <Text style={styles.titulo}>
@@ -279,6 +284,8 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   acoesCabecalho: { flexDirection: "row", gap: 10 },
+  conversas: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: CORES.cartao, borderWidth: 1, borderColor: CORES.borda, borderRadius: 14, padding: 16, marginBottom: 24 },
+  conversasTexto: { color: CORES.texto, fontSize: 15, fontWeight: "700", flex: 1 },
   botaoPerfil: {
     width: 44,
     height: 44,
