@@ -17,8 +17,10 @@ import {
   ApiError,
   getUserProfile,
   listarPrestadores,
+  listarSolicitacoesPendentes,
   logout,
   Prestador,
+  Solicitacao,
   UserProfile,
 } from "../src/services/api";
 
@@ -65,6 +67,7 @@ export default function Mecanico() {
   const [erro, setErro] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<UserProfile | null>(null);
   const [prestador, setPrestador] = useState<Prestador | null>(null);
+  const [chamados, setChamados] = useState<Solicitacao[]>([]);
 
   const carregar = useCallback(async () => {
     try {
@@ -76,6 +79,9 @@ export default function Mecanico() {
       // procurando na lista o registro cujo usuario_id é o do usuário logado.
       const lista = await listarPrestadores();
       setPrestador(lista.find((p) => p.usuario_id === perfil.id) ?? null);
+      if (perfil.tipo_usuario !== "CLIENTE") {
+        setChamados(await listarSolicitacoesPendentes());
+      }
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         router.replace("/");
@@ -260,6 +266,21 @@ export default function Mecanico() {
                 </View>
               </View>
             )}
+
+            <View style={styles.secaoContainer}>
+              <Text style={styles.secaoTitulo}>Conversas dos atendimentos</Text>
+              {chamados.length === 0 ? (
+                <Text style={styles.textoVazio}>Nenhum atendimento aguardando conversa.</Text>
+              ) : chamados.map((chamado) => (
+                <View key={chamado.id} style={styles.card}>
+                  <Text style={styles.servicoNome}>{chamado.categoria_nome ?? "Assistência veicular"}</Text>
+                  <Text style={styles.descricao}>{chamado.cliente_nome ?? "Cliente"}</Text>
+                  <TouchableOpacity style={styles.botaoAcao} onPress={() => router.push({ pathname: "/chat-vendedor", params: { solicitacaoId: String(chamado.id), vendedor: chamado.cliente_nome ?? "Cliente" } })}>
+                    <Text style={styles.botaoAcaoTexto}>Abrir conversa</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
 
             <View style={styles.secaoContainer}>
               <Text style={styles.secaoTitulo}>Meus serviços</Text>

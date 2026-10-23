@@ -77,16 +77,7 @@ export default function SolicitarAssistencia() {
 
     setEnviando(true);
     try {
-      const usuario = await getUserProfile();
-      await criarSolicitacao({
-        cliente_id: usuario.id,
-        categoria_id: categoriaId,
-        descricao_problema: descricao.trim() || undefined,
-        latitude_origem: coords.latitude,
-        longitude_origem: coords.longitude,
-      });
-
-      // Redireciona diretamente para o mapa com a categoria selecionada
+      // O atendimento é criado após o cliente escolher o prestador no mapa.
       router.push({
         pathname: "/mapa",
         params: { categoria_id: categoriaId },

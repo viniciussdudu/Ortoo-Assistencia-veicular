@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -23,7 +23,6 @@ import {
   CartaoUsuario,
   criarSolicitacao,
   listarCartoes,
-  listarMinhasSolicitacoes,
   Prestador,
 } from "../src/services/api";
 
@@ -49,26 +48,7 @@ export default function TelaMapa() {
   const [carregandoPrestadores, setCarregandoPrestadores] = useState(true);
   const [prestadorSelecionado, setPrestadorSelecionado] = useState<Prestador | null>(null);
 
-  // Referência mutável para acessar o ID da solicitação atualizado no cleanup de desmontagem
-  const solicitacaoIdRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    solicitacaoIdRef.current = solicitacaoId;
-  }, [solicitacaoId]);
-
-  // 1. CANCELAMENTO AUTOMÁTICO NA DESMONTAGEM DA TELA (Ao sair do Mapa por qualquer via)
-  useEffect(() => {
-    return () => {
-      if (solicitacaoIdRef.current) {
-        const idParaCancelar = solicitacaoIdRef.current;
-        cancelarSolicitacao(idParaCancelar)
-          .then(() => console.log(`✅ Solicitação ${idParaCancelar} cancelada automaticamente ao sair da tela.`))
-          .catch((err) => console.error("Erro ao cancelar solicitação ao sair:", err));
-      }
-    };
-  }, []);
-
-  // 2. TRATAMENTO DO BOTÃO VOLTAR FÍSICO / GESTOS DO DISPOSITIVO
+  // 1. TRATAMENTO DO BOTÃO VOLTAR FÍSICO / GESTOS DO DISPOSITIVO
   useEffect(() => {
     const onBackPress = () => {
       if (solicitacaoId) {
@@ -98,7 +78,7 @@ export default function TelaMapa() {
     router.back();
   };
 
-  // 3. Monitoramento do GPS do Cliente
+  // 2. Monitoramento do GPS do Cliente
   useEffect(() => {
     let inscricaoGPS: Location.LocationSubscription | null = null;
 
@@ -249,7 +229,7 @@ export default function TelaMapa() {
     try {
       // 1. Tenta criar uma nova solicitação no backend
       const novaSolicitacao = await criarSolicitacao({
-        cliente_id: CLIENTE_ID,
+        prestador_id: Number(prestadorId),
         categoria_id: Number(categoria_id) || 1,
         latitude_origem: clienteCoords.latitude,
         longitude_origem: clienteCoords.longitude,
@@ -260,34 +240,15 @@ export default function TelaMapa() {
         setSolicitacaoId(novaSolicitacao.id);
         setMostrarPagamentos(true);
         console.log("✅ Nova solicitação criada. ID:", novaSolicitacao.id);
+        router.push({
+          pathname: "/chat-vendedor",
+          params: {
+            solicitacaoId: String(novaSolicitacao.id),
+            vendedor: item.nome_fantasia || (item as any).nome || `Prestador #${prestadorId}`,
+          },
+        });
       }
     } catch (error: any) {
-      // 2. Se já existir uma solicitação em andamento, busca a solicitação ativa
-      if (
-        error?.message?.includes("solicitacao em andamento") ||
-        error?.message?.includes("já possui")
-      ) {
-        try {
-          const solicitacoes = await listarMinhasSolicitacoes(CLIENTE_ID);
-
-          const ativa = solicitacoes.find(
-            (s) =>
-              s.status === "PENDENTE" ||
-              s.status === "ACEITO" ||
-              s.status === "EM_ANDAMENTO"
-          );
-
-          if (ativa?.id) {
-            setSolicitacaoId(ativa.id);
-            setMostrarPagamentos(true);
-            console.log("🔄 Solicitação ativa recuperada. ID:", ativa.id);
-            return;
-          }
-        } catch (errBusca) {
-          console.error("Erro ao buscar solicitações ativas:", errBusca);
-        }
-      }
-
       Alert.alert(
         "Erro",
         error?.message || "Não foi possível processar a solicitação."
@@ -546,6 +507,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   textoBotao: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  botaoChat: {
+    borderWidth: 1,
+    borderColor: "#2563eb",
+    paddingVertical: 9,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  textoBotaoChat: { color: "#38bdf8", fontWeight: "600", fontSize: 13 },
   barraPagamento: {
     position: "absolute",
     left: 0,

@@ -262,7 +262,7 @@ export type Solicitacao = {
 };
 
 export type CriarSolicitacaoInput = {
-  cliente_id: number;
+  prestador_id: number;
   categoria_id: number;
   descricao_problema?: string;
   latitude_origem: number;
@@ -305,6 +305,33 @@ export function atualizarStatusSolicitacao(
       body: { status, prestador_id },
     },
   );
+}
+
+/* ==================== CHAT DO ATENDIMENTO ==================== */
+
+export type MensagemChat = {
+  id: number;
+  remetente_id: number;
+  remetente_nome: string;
+  conteudo: string;
+  criado_em: string;
+};
+
+export type ConversaAtendimento = {
+  solicitacao_id: number;
+  prestador: { nome: string };
+  mensagens: MensagemChat[];
+};
+
+export function listarMensagensChat(solicitacaoId: number) {
+  return request<ConversaAtendimento>(`/solicitacoes/${solicitacaoId}/chat`);
+}
+
+export function enviarMensagemChat(solicitacaoId: number, conteudo: string) {
+  return request<MensagemChat>(`/solicitacoes/${solicitacaoId}/chat`, {
+    method: "POST",
+    body: { conteudo },
+  });
 }
 
 /* ==================== CARTÕES & STRIPE ==================== */
