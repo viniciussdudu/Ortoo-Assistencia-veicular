@@ -231,6 +231,13 @@ export function listarPrestadores() {
   return request<Prestador[]>("/prestadores");
 }
 
+export function atualizarLocalizacaoPrestador(latitude: number, longitude: number) {
+  return request<{ sucesso: boolean; latitude: number; longitude: number }>(
+    "/prestadores/localizacao",
+    { method: "PUT", body: { latitude, longitude } },
+  );
+}
+
 /* ==================== SOLICITAÇÕES ==================== */
 
 export type SolicitacaoStatus =
@@ -259,6 +266,8 @@ export type Solicitacao = {
   cliente_nome?: string;
   cliente_telefone?: string;
   prestador_nome?: string;
+  prestador_latitude?: number | string | null;
+  prestador_longitude?: number | string | null;
 };
 
 export type CriarSolicitacaoInput = {

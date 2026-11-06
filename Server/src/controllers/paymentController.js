@@ -166,13 +166,17 @@ async function salvarCartao(req, res) {
   }
 }
 
-// Declarada como função local padronizada
 async function cobrarCartao(req, res) {
   const { transacao_id, metodo_pagamento } = req.body;
 
+  if (!transacao_id) {
+    return res.status(400).json({ erro: 'ID da transação é obrigatório.' });
+  }
+
   try {
+    // 1. Busca a transação trazendo também o solicitacao_id
     const [transacoes] = await db.query(
-      'SELECT id, valor FROM transacoes t WHERE id = ?',
+      'SELECT id, solicitacao_id, valor FROM transacoes WHERE id = ?',
       [transacao_id]
     );
 
@@ -181,33 +185,31 @@ async function cobrarCartao(req, res) {
     }
 
     const transacao = transacoes[0];
-    const valor_transacao = transacoes[1];
-    console.log(transacao);
+    console.log('📌 Transação encontrada:', transacao);
 
-    [objeto_client] = await db.query(
+    // 2. Busca o cliente_id da solicitação
+    const [solicitacoes] = await db.query(
       'SELECT cliente_id FROM solicitacoes WHERE id = ?',
       [transacao.solicitacao_id]
     );
 
-    if (objeto_client.length === 0) {
+    if (solicitacoes.length === 0) {
+      console.log('❌ Solicitação ID:', transacao.solicitacao_id, 'não foi encontrada na tabela solicitacoes!');
       return res.status(404).json({ erro: 'Solicitação não encontrada.' });
     }
 
-    const cliente_transacao = objeto_client[0].cliente_id;
+    const cliente_transacao = solicitacoes[0].cliente_id;
+    console.log('👤 Cliente da transação:', cliente_transacao);
 
-    console.log(cliente_transacao);
-
-    // Trata pagamentos PIX ou DINHEIRO diretamente sem exigir Stripe
+    // 3. Trata pagamentos PIX ou DINHEIRO
     if (metodo_pagamento === 'PIX' || metodo_pagamento === 'DINHEIRO') {
       await db.query(
         "UPDATE transacoes SET status = 'PAGO' WHERE id = ?",
         [transacao_id]
       );
 
-      await db.query(
-        "UPDATE solicitacoes SET status = 'EM_ANDAMENTO' WHERE id = ?",
-        [transacao.solicitacao_id]
-      );
+      // Pagamento confirmado não inicia o serviço. A solicitação continua
+      // PENDENTE até que o prestador aceite o chamado.
 
       return res.json({
         sucesso: true,
@@ -215,13 +217,13 @@ async function cobrarCartao(req, res) {
       });
     }
 
-    // Lógica para Cartão de Crédito
-    const stripe_costumer_id = await db.query(
+    // 4. Lógica para Cartão de Crédito
+    const [usuarios] = await db.query(
       'SELECT stripe_customer_id FROM usuarios WHERE id = ?',
       [cliente_transacao]
     );
 
-    const token_gateway = await db.query(
+    const [cartoes] = await db.query(
       'SELECT token_gateway FROM cartoes_usuario WHERE usuario_id = ? AND principal = 1',
       [cliente_transacao]
     );
@@ -232,29 +234,20 @@ async function cobrarCartao(req, res) {
       });
     }
 
+    const stripe_customer_id = usuarios[0]?.stripe_customer_id;
+    const token_gateway = cartoes[0]?.token_gateway;
+
     await stripe.paymentIntents.create(
       {
-        amount: Math.round(Number(valor_transacao)),
+        amount: Math.round(Number(transacao.valor) * 100), // Converte para centavos
         currency: 'brl',
-        customer: stripe_costumer_id,
+        customer: stripe_customer_id,
         payment_method: token_gateway,
         off_session: true,
         confirm: true,
       },
-      { idempotencyKey: `cobranca-solicitacao-${solicitacao_id}` }
+      { idempotencyKey: `cobranca-solicitacao-${transacao.solicitacao_id}` }
     );
-
-    // Erros de cartão (recusado, 3D Secure exigido, etc.)
-    if (error.type === 'StripeCardError') {
-      await db.query(
-        `INSERT INTO transacoes (solicitacao_id, valor, status) VALUES (?, 0, 'failed')`,
-        [solicitacao_id]
-      ).catch(() => {});
-      return res.status(402).json({
-        erro: error.message,
-        code: error.code,
-      });
-    }
 
     await db.query(
       "UPDATE transacoes SET status = 'PAGO' WHERE id = ?",
@@ -264,6 +257,14 @@ async function cobrarCartao(req, res) {
     return res.json({ sucesso: true, mensagem: 'Pagamento via Cartão realizado!' });
   } catch (error) {
     console.error('Erro na cobrança:', error);
+
+    if (error.type === 'StripeCardError') {
+      return res.status(402).json({
+        erro: error.message,
+        code: error.code,
+      });
+    }
+
     return res.status(500).json({ erro: error.message });
   }
 }

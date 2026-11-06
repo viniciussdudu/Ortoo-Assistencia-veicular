@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS solicitacoes (
     cliente_id INT NOT NULL,
     prestador_id INT,
     categoria_id INT NOT NULL,
-    status ENUM('PENDENTE', 'ACEITO', 'EM_ANDAMENTO', 'CONCLUIDO', 'CANCELADO') DEFAULT 'PENDENTE',
+    status ENUM('PENDENTE', 'ACEITO', 'A_CAMINHO', 'EM_ANDAMENTO', 'CONCLUIDO', 'CANCELADO') DEFAULT 'PENDENTE',
     descricao_problema TEXT,
     latitude_origem DECIMAL(10, 8) NOT NULL,
     longitude_origem DECIMAL(11, 8) NOT NULL,
