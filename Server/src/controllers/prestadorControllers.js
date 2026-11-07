@@ -59,6 +59,8 @@ async function listarPrestadores(req, res) {
       descricao_empresa: p.descricao_empresa,
       disponivel: !!p.disponivel,
       raio_atendimento_km: p.raio_atendimento_km,
+      latitude_atual: p.latitude_atual,
+      longitude_atual: p.longitude_atual,
       servicos: servicosPorPrestador.get(p.prestador_id) ?? [],
     }));
 
@@ -66,6 +68,41 @@ async function listarPrestadores(req, res) {
   } catch (erro) {
     console.error(erro);
     return res.status(500).json({ erro: "Nao foi possivel carregar os prestadores." });
+  }
+}
+
+// PUT /api/prestadores/localizacao
+async function atualizarLocalizacao(req, res) {
+  const latitude = Number(req.body?.latitude);
+  const longitude = Number(req.body?.longitude);
+
+  if (
+    !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
+    !Number.isFinite(longitude) || longitude < -180 || longitude > 180
+  ) {
+    return res.status(400).json({ erro: "Coordenadas inválidas." });
+  }
+
+  try {
+    const [perfis] = await db.execute(
+      "SELECT id FROM perfis_prestadores WHERE usuario_id = ? LIMIT 1",
+      [req.userId]
+    );
+    if (perfis.length === 0) {
+      return res.status(404).json({ erro: "Perfil de prestador não encontrado." });
+    }
+
+    await db.execute(
+      `UPDATE perfis_prestadores
+       SET latitude_atual = ?, longitude_atual = ? 
+       WHERE usuario_id = ?`,
+      [latitude, longitude, req.userId]
+    );
+
+    return res.json({ sucesso: true, latitude, longitude });
+  } catch (erro) {
+    console.error("Erro ao atualizar localização do prestador:", erro);
+    return res.status(500).json({ erro: "Falha ao atualizar localização." });
   }
 }
 
@@ -135,4 +172,4 @@ async function cadastrarServico(req, res) {
   }
 }
 
-module.exports = { listarPrestadores, cadastrarServico };
+module.exports = { listarPrestadores, atualizarLocalizacao, cadastrarServico };

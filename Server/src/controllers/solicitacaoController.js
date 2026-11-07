@@ -144,19 +144,14 @@ async function cancelarSolicitacao(req, res) {
 // =========================================================================
 
 // 5. Listar solicitações pendentes (para a tela/mapa do mecânico)
+// Listar solicitações para o painel do mecânico (pendentes + em andamento)
 async function listarPendentes(req, res) {
   try {
-    const [perfis] = await db.execute(
-      "SELECT id FROM perfis_prestadores WHERE usuario_id = ? LIMIT 1",
-      [req.userId]
-    );
-    if (perfis.length === 0) {
-      return res.status(403).json({ erro: "Apenas prestadores podem consultar atendimentos." });
-    }
     const [rows] = await db.query(
-      `SELECT
+      `SELECT 
         s.id,
         s.cliente_id,
+        s.prestador_id,
         s.categoria_id,
         s.latitude_origem,
         s.longitude_origem,
@@ -167,49 +162,62 @@ async function listarPendentes(req, res) {
         u.telefone AS cliente_telefone,
         c.nome AS categoria_nome
        FROM solicitacoes s
-       JOIN usuarios u ON s.cliente_id = u.id
+       INNER JOIN usuarios u ON s.cliente_id = u.id
        LEFT JOIN categorias_servico c ON s.categoria_id = c.id
-       WHERE s.prestador_id = ?
-         AND s.status IN ('PENDENTE', 'ACEITO', 'A_CAMINHO', 'EM_ANDAMENTO')
-       ORDER BY s.criado_em DESC`,
-      [perfis[0].id]
+       WHERE s.status IN ('PENDENTE', 'ACEITO', 'A_CAMINHO', 'EM_ANDAMENTO')
+       ORDER BY s.criado_em DESC`
     );
 
+    console.log(`📋 Encontradas ${rows.length} solicitações ativas para o mecânico.`);
     return res.json(rows);
   } catch (erro) {
-    console.error("Erro ao buscar chamadas pendentes:", erro);
-    return res.status(500).json({ erro: "Nao foi possivel carregar as chamadas pendentes." });
+    console.error("Erro ao buscar solicitações para o mecânico:", erro);
+    return res.status(500).json({ erro: "Não foi possível carregar as chamadas." });
   }
 }
 
-// 6. Buscar detalhes de uma solicitação por ID (para a tela de acompanhamento/polling)
+// Buscar detalhes de uma solicitação por ID (seguro contra colunas inexistentes)
 async function buscarPorId(req, res) {
   const { id } = req.params;
 
   try {
+    // 1. Busca os dados principais da solicitação, cliente, categoria e prestador
     const [rows] = await db.query(
-      `SELECT
-        s.*,
+      `SELECT 
+        s.id,
+        s.cliente_id,
+        s.prestador_id,
+        s.categoria_id,
+        s.status,
+        s.descricao_problema,
+        s.latitude_origem,
+        s.longitude_origem,
+        s.criado_em,
         u.nome AS cliente_nome,
         u.telefone AS cliente_telefone,
         c.nome AS categoria_nome,
-        p.nome AS prestador_nome
+        COALESCE(perfil.nome_fantasia, prestador.nome) AS prestador_nome,
+        perfil.latitude_atual AS prestador_latitude,
+        perfil.longitude_atual AS prestador_longitude
        FROM solicitacoes s
-       JOIN usuarios u ON s.cliente_id = u.id
+       INNER JOIN usuarios u ON s.cliente_id = u.id
        LEFT JOIN categorias_servico c ON s.categoria_id = c.id
-       LEFT JOIN usuarios p ON s.prestador_id = p.id
+       LEFT JOIN perfis_prestadores perfil ON s.prestador_id = perfil.id
+       LEFT JOIN usuarios prestador ON perfil.usuario_id = prestador.id
        WHERE s.id = ?`,
       [id]
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ erro: "Solicitacao nao encontrada." });
+      return res.status(404).json({ erro: "Solicitação não encontrada." });
     }
 
-    return res.json(rows[0]);
+    const solicitacao = rows[0];
+
+    return res.json(solicitacao);
   } catch (erro) {
-    console.error("Erro ao buscar solicitacao por ID:", erro);
-    return res.status(500).json({ erro: "Nao foi possivel buscar a solicitacao." });
+    console.error("Erro detalhado na solicitação por ID:", erro);
+    return res.status(500).json({ erro: "Não foi possível buscar a solicitação." });
   }
 }
 

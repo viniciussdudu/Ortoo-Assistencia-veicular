@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   ApiError,
+  atualizarStatusSolicitacao,
   getUserProfile,
   listarPrestadores,
   listarSolicitacoesPendentes,
@@ -69,33 +70,42 @@ export default function Mecanico() {
   const [prestador, setPrestador] = useState<Prestador | null>(null);
   const [chamados, setChamados] = useState<Solicitacao[]>([]);
 
-  const carregar = useCallback(async () => {
-    try {
-      setErro(null);
-      const perfil = await getUserProfile();
-      setUsuario(perfil);
+const carregar = useCallback(async () => {
+  try {
+    setErro(null);
+    const perfil = await getUserProfile();
+    setUsuario(perfil);
 
-      // Não existe endpoint "meu prestador": o vínculo é feito localmente,
-      // procurando na lista o registro cujo usuario_id é o do usuário logado.
-      const lista = await listarPrestadores();
-      setPrestador(lista.find((p) => p.usuario_id === perfil.id) ?? null);
-      if (perfil.tipo_usuario !== "CLIENTE") {
-        setChamados(await listarSolicitacoesPendentes());
-      }
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) {
-        router.replace("/");
-        return;
-      }
-      setErro(
-        e instanceof ApiError
-          ? e.message
-          : "Verifique sua conexão e tente novamente."
-      );
+    console.log("👤 Perfil do usuário logado:", perfil);
+
+    const lista = await listarPrestadores();
+    const meuPrestador = lista.find((p) => p.usuario_id === perfil.id) ?? null;
+    setPrestador(meuPrestador);
+
+    console.log("🛠️ Prestador vinculado:", meuPrestador);
+
+    // Busca as solicitações
+    if (perfil.tipo_usuario !== "CLIENTE") {
+      const chamadosRecebidos = await listarSolicitacoesPendentes();
+      console.log("📋 Chamados recebidos da API:", chamadosRecebidos);
+      setChamados(chamadosRecebidos);
+    } else {
+      console.warn("⚠️ Usuário logado está com tipo_usuario = 'CLIENTE'.");
     }
-  }, [router]);
+  } catch (e) {
+    console.error("❌ Erro no carregar do Mecanico:", e);
+    if (e instanceof ApiError && e.status === 401) {
+      router.replace("/");
+      return;
+    }
+    setErro(
+      e instanceof ApiError
+        ? e.message
+        : "Verifique sua conexão e tente novamente."
+    );
+  }
+}, [router]);
 
-  // Recarrega ao voltar da tela de cadastro, para mostrar o serviço novo.
   useFocusEffect(
     useCallback(() => {
       let ativo = true;
@@ -127,6 +137,35 @@ export default function Mecanico() {
       );
     } finally {
       setSaindo(false);
+    }
+  }
+
+  async function handleAceitarChamado(chamadoId: number) {
+    if (!prestador) {
+      Alert.alert(
+        "Atenção",
+        "Você precisa de um perfil de prestador ativo para aceitar chamados."
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // 1. Atualiza o status da solicitação no backend para 'ACEITO' vinculando o ID do prestador
+      await atualizarStatusSolicitacao(chamadoId, "ACEITO", prestador.id);
+
+      // 2. Redireciona o mecânico direto para a tela de acompanhamento
+      router.push({
+        pathname: "/status-atendimento",
+        params: {
+          solicitacaoId: String(chamadoId),
+          modo: "mecanico",
+        },
+      });
+    } catch (error) {
+      Alert.alert("Erro", "Não foi possível aceitar este chamado no momento.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -202,7 +241,7 @@ export default function Mecanico() {
             <Text style={styles.infoTexto}>{usuario.telefone}</Text>
           ) : null}
           <Text style={styles.infoTexto}>
-            {ROTULO_TIPO[usuario.tipo_usuario]} • {usuario.tipo_documento}{" "}
+            {ROTULO_TIPO[usuario.tipo_usuario]} - {usuario.tipo_documento}{" "}
             {usuario.documento}
           </Text>
         </View>
@@ -267,19 +306,101 @@ export default function Mecanico() {
               </View>
             )}
 
+            {/* SEÇÃO DE SOLICITAÇÕES E CHAMADOS RECEBIDOS */}
             <View style={styles.secaoContainer}>
-              <Text style={styles.secaoTitulo}>Conversas dos atendimentos</Text>
+              <Text style={styles.secaoTitulo}>Solicitações de Socorro</Text>
               {chamados.length === 0 ? (
-                <Text style={styles.textoVazio}>Nenhum atendimento aguardando conversa.</Text>
-              ) : chamados.map((chamado) => (
-                <View key={chamado.id} style={styles.card}>
-                  <Text style={styles.servicoNome}>{chamado.categoria_nome ?? "Assistência veicular"}</Text>
-                  <Text style={styles.descricao}>{chamado.cliente_nome ?? "Cliente"}</Text>
-                  <TouchableOpacity style={styles.botaoAcao} onPress={() => router.push({ pathname: "/chat-vendedor", params: { solicitacaoId: String(chamado.id), vendedor: chamado.cliente_nome ?? "Cliente" } })}>
-                    <Text style={styles.botaoAcaoTexto}>Abrir conversa</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                <Text style={styles.textoVazio}>
+                  Nenhuma solicitação pendente no momento.
+                </Text>
+              ) : (
+                chamados.map((chamado) => (
+                  <View key={chamado.id} style={styles.card}>
+                    <View style={styles.linhaEntre}>
+                      <Text style={styles.servicoNome}>
+                        {chamado.categoria_nome ?? "Assistência veicular"}
+                      </Text>
+                      <Text style={styles.servicoPreco}>#{chamado.id}</Text>
+                    </View>
+
+                    <Text style={styles.descricao}>
+                      Cliente: {chamado.cliente_nome ?? "Motorista"}
+                    </Text>
+                    {chamado.descricao_problema ? (
+                      <Text style={styles.infoTexto}>
+                        Problema: {chamado.descricao_problema}
+                      </Text>
+                    ) : null}
+
+                    {/* BOTÕES DE AÇÃO DO MECÂNICO */}
+                    <View style={styles.botoesContainer}>
+                      {chamado.status === "PENDENTE" ? (
+                        <TouchableOpacity
+                          style={[
+                            styles.botaoAcaoCard,
+                            { backgroundColor: CORES.primaria },
+                          ]}
+                          onPress={() => handleAceitarChamado(chamado.id)}
+                        >
+                          <MaterialCommunityIcons
+                            name="check-circle-outline"
+                            size={18}
+                            color="#fff"
+                          />
+                          <Text style={styles.botaoAcaoCardTexto}>Aceitar</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          style={[
+                            styles.botaoAcaoCard,
+                            { backgroundColor: "#16a34a" },
+                          ]}
+                          onPress={() =>
+                            router.push({
+                              pathname: "/status-atendimento",
+                              params: {
+                                solicitacaoId: String(chamado.id),
+                                modo: "mecanico",
+                              },
+                            })
+                          }
+                        >
+                          <MaterialCommunityIcons
+                            name="tow-truck"
+                            size={18}
+                            color="#fff"
+                          />
+                          <Text style={styles.botaoAcaoCardTexto}>
+                            Acompanhar
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <TouchableOpacity
+                        style={styles.botaoAcaoCardOutline}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/chat-vendedor",
+                            params: {
+                              solicitacaoId: String(chamado.id),
+                              vendedor: chamado.cliente_nome ?? "Cliente",
+                            },
+                          })
+                        }
+                      >
+                        <MaterialCommunityIcons
+                          name="message-text-outline"
+                          size={18}
+                          color={CORES.destaque}
+                        />
+                        <Text style={styles.botaoAcaoCardOutlineTexto}>
+                          Chat
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
 
             <View style={styles.secaoContainer}>
@@ -385,19 +506,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 40,
   },
-  botaoVoltar: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    marginBottom: 20,
-    paddingVertical: 6,
-  },
-  voltarTexto: {
-    color: CORES.texto,
-    fontSize: 15,
-    fontWeight: "600",
-  },
   header: {
     alignItems: "center",
     marginBottom: 32,
@@ -487,6 +595,42 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: CORES.texto,
+  },
+  botoesContainer: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+  botaoAcaoCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  botaoAcaoCardTexto: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  botaoAcaoCardOutline: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: CORES.cartao,
+    borderWidth: 1,
+    borderColor: CORES.borda,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  botaoAcaoCardOutlineTexto: {
+    color: CORES.destaque,
+    fontWeight: "600",
+    fontSize: 14,
   },
   linhaEntre: {
     flexDirection: "row",

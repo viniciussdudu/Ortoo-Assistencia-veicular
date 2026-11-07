@@ -215,85 +215,111 @@ export default function TelaMapa() {
   }
 
   // Função disparada ao clicar no botão 'Chamar'
-  async function handleChamarPrestador(item: Prestador) {
-    const prestadorId = item.id || (item as any).prestador_id;
-    console.log("👉 Botão Chamar clicado para o prestador:", prestadorId);
+async function handleChamarPrestador(item: Prestador) {
+  const prestadorId = item.id || (item as any).prestador_id;
+  console.log("👉 Botão Chamar clicado para o prestador:", prestadorId);
 
-    setPrestadorSelecionado(item);
+  setPrestadorSelecionado(item);
 
-    if (!clienteCoords) {
-      ShowAlert("Atenção", "Obtendo localização do GPS...");
-      return;
-    }
-
-    try {
-      // 1. Tenta criar uma nova solicitação no backend
-      const novaSolicitacao = await criarSolicitacao({
-        prestador_id: Number(prestadorId),
-        categoria_id: Number(categoria_id) || 1,
-        latitude_origem: clienteCoords.latitude,
-        longitude_origem: clienteCoords.longitude,
-        descricao_problema: "Solicitação via Mapa",
-      });
-
-      if (novaSolicitacao?.id) {
-        setSolicitacaoId(novaSolicitacao.id);
-        setMostrarPagamentos(true);
-        console.log("✅ Nova solicitação criada. ID:", novaSolicitacao.id);
-        router.push({
-          pathname: "/chat-vendedor",
-          params: {
-            solicitacaoId: String(novaSolicitacao.id),
-            vendedor: item.nome_fantasia || (item as any).nome || `Prestador #${prestadorId}`,
-          },
-        });
-      }
-    } catch (error: any) {
-      Alert.alert(
-        "Erro",
-        error?.message || "Não foi possível processar a solicitação."
-      );
-    }
+  if (!clienteCoords) {
+    ShowAlert("Atenção", "Obtendo localização do GPS...");
+    return;
   }
 
-  async function processarPagamento(metodo: "PIX" | "DINHEIRO" | "CARTAO" = "PIX") {
-    if (!solicitacaoId) {
-      ShowAlert("Erro", "Crie uma solicitação antes de pagar.");
-      return;
-    }
+  try {
+    // 1. Tenta criar uma nova solicitação no backend
+    const novaSolicitacao = await criarSolicitacao({
+      prestador_id: Number(prestadorId),
+      categoria_id: Number(categoria_id) || 1,
+      latitude_origem: clienteCoords.latitude,
+      longitude_origem: clienteCoords.longitude,
+      descricao_problema: "Solicitação via Mapa",
+    });
 
-    setProcessandoPagamento(true);
-
-    try {
-      const response = await fetch(`${API_URL}/pagamento/transacoes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          solicitacao_id: solicitacaoId,
-          usuario_id: CLIENTE_ID,
-        })
-      });
-      const transacao = await response.json();
-
-      if (!response.ok) {
-        throw new Error(transacao.erro || "Não foi possível criar a transação.");
-      }
-
-      await realizarPagamento(transacao.id, metodo);
-      setMostrarPagamentos(false);
+    if (novaSolicitacao?.id) {
+      console.log("✅ Nova solicitação criada com sucesso! ID:", novaSolicitacao.id);
       
-      // Limpa a solicitação do estado local após o pagamento concluído
-      setSolicitacaoId(null);
-      Alert.alert("Sucesso", "Pagamento realizado com sucesso!");
-    } catch (error) {
-      Alert.alert(
-        "Erro no pagamento",
-        error instanceof Error ? error.message : "Tente novamente."
-      );
-    } finally {
-      setProcessandoPagamento(false);
+      // Atualiza o estado React
+      setSolicitacaoId(novaSolicitacao.id);
+      
+      // Abre a barra de pagamentos
+      setMostrarPagamentos(true);
+    } else {
+      Alert.alert("Erro", "O servidor criou o chamado mas não retornou a ID da solicitação.");
     }
+  } catch (error: any) {
+    Alert.alert(
+      "Erro",
+      error?.message || "Não foi possível processar a solicitação."
+    );
   }
+}
+
+async function processarPagamento(metodo: "PIX" | "DINHEIRO" | "CARTAO" = "PIX") {
+  const idParaPagar = solicitacaoId;
+
+  if (!idParaPagar) {
+    Alert.alert("Atenção", "Solicitação não encontrada. Por favor, clique em 'Chamar' novamente.");
+    return;
+  }
+
+  setProcessandoPagamento(true);
+
+  try {
+    console.log(`💳 Enviando transação para a solicitação ID: ${idParaPagar} via ${metodo}`);
+
+    const response = await fetch(`${API_URL}/pagamento/transacoes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        solicitacao_id: idParaPagar,
+        usuario_id: CLIENTE_ID,
+      }),
+    });
+
+    const transacao = await response.json();
+
+    if (!response.ok) {
+      throw new Error(transacao.erro || "Não foi possível criar a transação no servidor.");
+    }
+
+    // Processa a cobrança
+    await realizarPagamento(transacao.id, metodo);
+
+    // Salva os dados do prestador antes de resetar o estado local
+    const nomeVendedor =
+      prestadorSelecionado?.nome_fantasia ||
+      (prestadorSelecionado as any)?.nome ||
+      `Prestador #${prestadorSelecionado?.id}`;
+
+    setMostrarPagamentos(false);
+    setSolicitacaoId(null);
+
+    // Exibe o alerta de sucesso e redireciona para o status do atendimento
+    Alert.alert("Sucesso", "Pagamento realizado com sucesso!", [
+      {
+        text: "Acompanhar Atendimento",
+        onPress: () => {
+          router.push({
+            pathname: "/status-atendimento",
+            params: {
+              solicitacaoId: String(idParaPagar),
+              vendedor: nomeVendedor,
+            },
+          });
+        },
+      },
+    ]);
+  } catch (error) {
+    Alert.alert(
+      "Erro no pagamento",
+      error instanceof Error ? error.message : "Tente novamente."
+    );
+  } finally {
+    setProcessandoPagamento(false);
+  }
+}
+  
 
   if (!clienteCoords && !erroGps) {
     return (

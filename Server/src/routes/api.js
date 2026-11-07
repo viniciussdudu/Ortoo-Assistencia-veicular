@@ -71,6 +71,7 @@ router.post("/solicitacoes/cancelar", async (req, res) => {
 
 // Rotas de Prestadores
 router.get("/prestadores", prestadorController.listarPrestadores);
+router.put("/prestadores/localizacao", requireAuth, prestadorController.atualizarLocalizacao);
 router.post("/servicos", requireAuth, prestadorController.cadastrarServico);
 
 // Rota para listar prestadores por categoria de serviço
