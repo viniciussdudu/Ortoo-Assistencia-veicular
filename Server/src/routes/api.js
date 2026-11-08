@@ -9,6 +9,7 @@ const solicitacaoController = require("../controllers/solicitacaoController");
 const paymentController = require("../controllers/paymentController");
 const veiculoController = require("../controllers/veiculoController");
 const chatController = require("../controllers/chatController");
+const suporteController = require("../controllers/suporteController");
 
 const router = express.Router();
 
@@ -122,5 +123,9 @@ router.post("/veiculos", veiculoController.criarVeiculo);
 router.get("/veiculos/:id", veiculoController.obterVeiculo);
 router.patch("/veiculos/:id/quilometragem", veiculoController.atualizarQuilometragem);
 router.post("/veiculos/:id/manutencoes", veiculoController.registrarManutencao);
+
+// Rotas de Suporte Geral ao Cliente/Prestador
+router.get("/suporte/mensagens", requireAuth, suporteController.listarMensagens);
+router.post("/suporte/mensagens", requireAuth, suporteController.enviarMensagem);
 
 module.exports = router;
