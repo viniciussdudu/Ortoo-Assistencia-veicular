@@ -19,8 +19,11 @@ import {
   getUserProfile,
   listarCategorias,
 } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
 export default function SolicitarAssistencia() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
     const params = useLocalSearchParams<{ categoriaId?: string }>();
   const [categoriaId, setCategoriaId] = useState<number | null>(
@@ -93,7 +96,7 @@ export default function SolicitarAssistencia() {
   if (carregando) {
     return (
       <View style={[styles.container, styles.centro]}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={CORES.destaque} />
       </View>
     );
   }
@@ -124,6 +127,7 @@ export default function SolicitarAssistencia() {
         numberOfLines={4}
         value={descricao}
         onChangeText={setDescricao}
+        placeholderTextColor={CORES.textoSuave}
         placeholder="Ex.: carro não liga, luz da bateria acesa"
       />
 
@@ -148,40 +152,43 @@ export default function SolicitarAssistencia() {
   );
 }
 
-const styles = StyleSheet.create({
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
   container: { padding: 24, gap: 16 },
   centro: { flex: 1, justifyContent: "center" },
-  titulo: { fontSize: 24, fontWeight: "700", color: "#1F3140" },
-  rotulo: { fontSize: 15, fontWeight: "600", color: "#1F3140", marginTop: 8 },
+  titulo: { fontSize: 24, fontWeight: "700", color: CORES.texto },
+  rotulo: { fontSize: 15, fontWeight: "600", color: CORES.texto, marginTop: 8 },
   grade: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#1F3140",
+    borderColor: CORES.borda, backgroundColor: CORES.cartao,
   },
-  chipAtivo: { backgroundColor: "#C85A34", borderColor: "#C85A34" },
-  chipTexto: { color: "#1F3140", fontWeight: "500" },
-  chipTextoAtivo: { color: "#F3EBDA" },
+  chipAtivo: { backgroundColor: CORES.destaque, borderColor: CORES.destaque },
+  chipTexto: { color: CORES.texto, fontWeight: "500" },
+  chipTextoAtivo: { color: CORES.sobrePrimaria },
   campo: {
     borderWidth: 1,
-    borderColor: "#CCC",
+    borderColor: CORES.borda,
+    backgroundColor: CORES.cartao,
+    color: CORES.texto,
     borderRadius: 8,
     padding: 12,
     minHeight: 96,
     textAlignVertical: "top",
   },
-  local: { padding: 12, backgroundColor: "#F3EBDA", borderRadius: 8 },
-  localTexto: { color: "#1F3140", fontSize: 13 },
-  localErro: { color: "#B00020", fontSize: 13 },
+  local: { padding: 12, backgroundColor: CORES.cartao, borderRadius: 8 },
+  localTexto: { color: CORES.texto, fontSize: 13 },
+  localErro: { color: CORES.erro, fontSize: 13 },
   botao: {
-    backgroundColor: "#C85A34",
+    backgroundColor: CORES.destaque,
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: "center",
     marginTop: 8,
   },
   botaoDesabilitado: { opacity: 0.5 },
-  botaoTexto: { color: "#F3EBDA", fontWeight: "700", fontSize: 16 },
+  botaoTexto: { color: CORES.sobrePrimaria, fontWeight: "700", fontSize: 16 },
 });

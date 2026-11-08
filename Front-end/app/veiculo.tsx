@@ -20,26 +20,11 @@ import {
     listarVeiculos,
     obterVeiculo,
 } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
 // TODO: trocar pelo id do usuario logado quando houver sessao real.
 const CLIENTE_ID = 1;
 
-const CORES = {
-  fundo: "#F3EBDA",
-  primaria: "#1F3140",
-  destaque: "#C85A34",
-  destaqueSuave: "#FBEDE6",
-  cartao: "#FFFFFF",
-  texto: "#1F3140",
-  textoSuave: "#7A7266",
-  borda: "#EAE2D2",
-  ok: "#2E7D52",
-  okSuave: "#E6F2EB",
-  atencao: "#B8860B",
-  atencaoSuave: "#FBF3DF",
-  critico: "#B3261E",
-  criticoSuave: "#FBE9E7",
-};
 
 // Intervalos de referência geral. Não substituem o manual do fabricante.
 const PLANO = [
@@ -133,26 +118,28 @@ function statusDoItem(
   };
 }
 
-const ESTILO_NIVEL = {
-  ok: { fundo: CORES.okSuave, cor: CORES.ok, icone: "check-circle" as const },
+const estiloNivel = (CORES: Cores) => ({
+  ok: { fundo: CORES.sucessoSuave, cor: CORES.sucesso, icone: "check-circle" as const },
   atencao: {
     fundo: CORES.atencaoSuave,
     cor: CORES.atencao,
     icone: "clock-alert" as const,
   },
   critico: {
-    fundo: CORES.criticoSuave,
-    cor: CORES.critico,
+    fundo: CORES.erroSuave,
+    cor: CORES.erro,
     icone: "alert-circle" as const,
   },
   desconhecido: {
-    fundo: "#EFEDE8",
+    fundo: CORES.borda,
     cor: CORES.textoSuave,
     icone: "help-circle" as const,
   },
-};
+});
 
 export default function PerfilVeiculo() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
 
@@ -320,7 +307,7 @@ export default function PerfilVeiculo() {
             <Text style={styles.kmValor}>{kmFormatado} km</Text>
           </View>
           <View style={styles.kmBotao}>
-            <MaterialCommunityIcons name="pencil" size={18} color="#FFF" />
+            <MaterialCommunityIcons name="pencil" size={18} color={CORES.sobrePrimaria} />
           </View>
         </TouchableOpacity>
 
@@ -342,7 +329,7 @@ export default function PerfilVeiculo() {
         <Text style={styles.secao}>Plano de manutenção</Text>
         <View style={styles.lista}>
           {proximos.map(({ item, status }) => {
-            const estilo = ESTILO_NIVEL[status.nivel];
+            const estilo = estiloNivel(CORES)[status.nivel];
             return (
               <View key={item.tipo} style={styles.linhaManutencao}>
                 <View
@@ -505,7 +492,8 @@ const sombra = Platform.select({
   },
 }) as object;
 
-const styles = StyleSheet.create({
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
   tela: { flex: 1, backgroundColor: CORES.fundo },
   scroll: { alignItems: "center", paddingVertical: 28 },
   conteudo: { width: "100%", maxWidth: 520, paddingHorizontal: 20 },
@@ -715,7 +703,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: "center",
   },
-  botaoAjudaTexto: { color: "#FFF", fontWeight: "600", fontSize: 13.5 },
+  botaoAjudaTexto: { color: CORES.sobrePrimaria, fontWeight: "600", fontSize: 13.5 },
 
   tituloVazio: { fontSize: 17, fontWeight: "700", color: CORES.texto },
   textoVazio: {
@@ -731,11 +719,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginTop: 8,
   },
-  botaoPrimarioTexto: { color: "#FFF", fontWeight: "600", fontSize: 14 },
+  botaoPrimarioTexto: { color: CORES.sobrePrimaria, fontWeight: "600", fontSize: 14 },
 
   modalFundo: {
     flex: 1,
-    backgroundColor: "rgba(31,49,64,0.45)",
+    backgroundColor: CORES.sobreposicao,
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
@@ -762,7 +750,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: CORES.texto,
   },
-  modalErro: { color: CORES.critico, fontSize: 12.5, marginTop: 8 },
+  modalErro: { color: CORES.erro, fontSize: 12.5, marginTop: 8 },
   modalBotoes: {
     flexDirection: "row",
     justifyContent: "flex-end",

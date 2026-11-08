@@ -10,8 +10,11 @@ import {
   View,
 } from "react-native";
 import { ApiError, recuperarSenha } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
 export default function RecuperarSenha() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
@@ -67,6 +70,7 @@ export default function RecuperarSenha() {
 
         <TextInput
           style={styles.input}
+          placeholderTextColor={CORES.textoSuave}
           placeholder="Seu e-mail cadastrado"
           keyboardType="email-address"
           autoCapitalize="none"
@@ -76,6 +80,7 @@ export default function RecuperarSenha() {
 
         <TextInput
           style={styles.input}
+          placeholderTextColor={CORES.textoSuave}
           placeholder="Nova senha (6 dígitos numéricos)"
           keyboardType="numeric"
           secureTextEntry
@@ -86,6 +91,7 @@ export default function RecuperarSenha() {
 
         <TextInput
           style={styles.input}
+          placeholderTextColor={CORES.textoSuave}
           placeholder="Confirme a nova senha"
           keyboardType="numeric"
           secureTextEntry
@@ -100,7 +106,7 @@ export default function RecuperarSenha() {
           disabled={carregando}
         >
           {carregando ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={CORES.sobrePrimaria} />
           ) : (
             <Text style={styles.buttonText}>Atualizar Senha</Text>
           )}
@@ -114,26 +120,28 @@ export default function RecuperarSenha() {
   );
 }
 
-const styles = StyleSheet.create({
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
-    backgroundColor: "#fff",
+    backgroundColor: CORES.fundo,
   },
   formCard: {
     width: "100%",
     maxWidth: 400,
   },
   title: {
+    color: CORES.texto,
     fontSize: 26,
     fontWeight: "bold",
     marginBottom: 8,
     textAlign: "center",
   },
   subtitle: {
-    color: "#666",
+    color: CORES.textoSuave,
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
@@ -141,7 +149,9 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: CORES.borda,
+    backgroundColor: CORES.cartao,
+    color: CORES.texto,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -149,17 +159,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   button: {
-    backgroundColor: "#2563eb",
+    backgroundColor: CORES.primaria,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: "center",
     marginTop: 8,
   },
   buttonDisabled: {
-    backgroundColor: "#93c5fd",
+    backgroundColor: CORES.primaria,
+    opacity: 0.5,
   },
   buttonText: {
-    color: "#fff",
+    color: CORES.sobrePrimaria,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -169,12 +180,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   backButtonText: {
-    color: "#4b5563",
+    color: CORES.textoSuave,
     fontSize: 15,
   },
   erroText: {
-    color: "#dc2626",
-    backgroundColor: "#fee2e2",
+    color: CORES.erro,
+    backgroundColor: CORES.erroSuave,
     padding: 10,
     borderRadius: 6,
     marginBottom: 12,

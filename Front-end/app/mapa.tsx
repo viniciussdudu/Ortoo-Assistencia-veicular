@@ -25,12 +25,15 @@ import {
   listarCartoes,
   Prestador,
 } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
 // TODO: substituir pelo ID do usuário logado na sessão real
 const CLIENTE_ID = 1;
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api";
 
 export default function TelaMapa() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -325,7 +328,7 @@ async function processarPagamento(metodo: "PIX" | "DINHEIRO" | "CARTAO" = "PIX")
     return (
       <View style={styles.carregandoContainer}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ActivityIndicator size="large" color="#fcf7f7" />
+        <ActivityIndicator size="large" color={CORES.destaque} />
         <Text style={styles.textoCarregando}>Obtendo sua localização...</Text>
       </View>
     );
@@ -358,7 +361,7 @@ async function processarPagamento(metodo: "PIX" | "DINHEIRO" | "CARTAO" = "PIX")
           <Text style={styles.tituloPainel}>Empresas Disponíveis</Text>
 
           {carregandoPrestadores ? (
-            <ActivityIndicator size="small" color="#ffffff" style={{ marginVertical: 20 }} />
+            <ActivityIndicator size="small" color={CORES.destaque} style={{ marginVertical: 20 }} />
           ) : prestadores.length === 0 ? (
             <Text style={styles.textoVazio}>Nenhuma empresa disponível para este serviço no momento.</Text>
           ) : (
@@ -432,7 +435,7 @@ async function processarPagamento(metodo: "PIX" | "DINHEIRO" | "CARTAO" = "PIX")
               disabled={processandoPagamento}
             >
               {processandoPagamento ? (
-                <ActivityIndicator size="small" color="#38bdf8" />
+                <ActivityIndicator size="small" color={CORES.destaque} />
               ) : (
                 <>
                   <Text style={styles.iconePagamento}>PIX</Text>
@@ -444,7 +447,7 @@ async function processarPagamento(metodo: "PIX" | "DINHEIRO" | "CARTAO" = "PIX")
             {/* Opção Cartões de Crédito */}
             {carregandoCartoes ? (
               <View style={styles.opcaoPagamento}>
-                <ActivityIndicator size="small" color="#38bdf8" />
+                <ActivityIndicator size="small" color={CORES.destaque} />
                 <Text style={styles.textoOpcaoPagamento}>Cartões</Text>
               </View>
             ) : (
@@ -478,76 +481,77 @@ async function processarPagamento(metodo: "PIX" | "DINHEIRO" | "CARTAO" = "PIX")
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
+  container: { flex: 1, backgroundColor: CORES.fundo },
   carregandoContainer: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: CORES.fundo,
     justifyContent: "center",
     alignItems: "center",
   },
-  textoCarregando: { color: "#fff", marginTop: 12, fontSize: 14 },
+  textoCarregando: { color: CORES.texto, marginTop: 12, fontSize: 14 },
   overlay: { flex: 1, justifyContent: "space-between" },
   botaoVoltar: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(5, 5, 5, 0.9)",
+    backgroundColor: CORES.cartao,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     marginLeft: 16,
     elevation: 4,
   },
-  voltarTexto: { color: "#ffffff", fontWeight: "600", fontSize: 14 },
+  voltarTexto: { color: CORES.texto, fontWeight: "600", fontSize: 14 },
   painelInferior: { paddingVertical: 16 },
   tituloPainel: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#ffffff",
+    color: CORES.texto,
     marginLeft: 16,
     marginBottom: 12,
   },
   textoVazio: {
-    color: "#9ca3af",
+    color: CORES.textoSuave,
     marginLeft: 16,
     fontSize: 14,
   },
   listaHorizontal: { paddingHorizontal: 16, gap: 12 },
   cardMecanico: {
     width: 220,
-    backgroundColor: "#080808",
+    backgroundColor: CORES.cartao,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
     borderColor: "transparent",
   },
   cardSelecionado: {
-    borderColor: "#2563eb",
-    backgroundColor: "#111827",
+    borderColor: CORES.primaria,
+    backgroundColor: CORES.cartao,
   },
-  nomeMecanico: { fontSize: 15, fontWeight: "bold", color: "#ffffff" },
-  infoMecanico: { fontSize: 13, color: "#38bdf8", marginTop: 4, marginBottom: 12 },
+  nomeMecanico: { fontSize: 15, fontWeight: "bold", color: CORES.texto },
+  infoMecanico: { fontSize: 13, color: CORES.destaque, marginTop: 4, marginBottom: 12 },
   botaoChamar: {
-    backgroundColor: "#2563eb",
+    backgroundColor: CORES.primaria,
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: "center",
   },
-  textoBotao: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  textoBotao: { color: CORES.sobrePrimaria, fontWeight: "600", fontSize: 13 },
   botaoChat: {
     borderWidth: 1,
-    borderColor: "#2563eb",
+    borderColor: CORES.primaria,
     paddingVertical: 9,
     borderRadius: 8,
     alignItems: "center",
     marginTop: 8,
   },
-  textoBotaoChat: { color: "#38bdf8", fontWeight: "600", fontSize: 13 },
+  textoBotaoChat: { color: CORES.destaque, fontWeight: "600", fontSize: 13 },
   barraPagamento: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#111827",
+    backgroundColor: CORES.cartao,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     paddingHorizontal: 20,
@@ -565,20 +569,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  tituloPagamento: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  tituloPagamento: { color: CORES.texto, fontSize: 16, fontWeight: "700" },
   botaoFechar: { padding: 4 },
-  textoFechar: { color: "#9ca3af", fontSize: 16, fontWeight: "700" },
+  textoFechar: { color: CORES.textoSuave, fontSize: 16, fontWeight: "700" },
   opcoesPagamento: { flexDirection: "row", gap: 10 },
   opcaoPagamento: {
     flex: 1,
     minHeight: 76,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1f2937",
+    backgroundColor: CORES.fundo,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: CORES.borda,
   },
-  iconePagamento: { color: "#38bdf8", fontSize: 14, fontWeight: "800", marginBottom: 6 },
-  textoOpcaoPagamento: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  iconePagamento: { color: CORES.destaque, fontSize: 14, fontWeight: "800", marginBottom: 6 },
+  textoOpcaoPagamento: { color: CORES.texto, fontSize: 13, fontWeight: "600" },
 });

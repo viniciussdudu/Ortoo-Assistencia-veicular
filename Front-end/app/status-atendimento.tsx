@@ -21,6 +21,7 @@ import {
   Solicitacao,
   SolicitacaoStatus,
 } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
 const ETAPAS: Array<{ key: SolicitacaoStatus; label: string; icone: string }> = [
   { key: "PENDENTE", label: "Aguardando confirmação", icone: "clock-outline" },
@@ -31,6 +32,8 @@ const ETAPAS: Array<{ key: SolicitacaoStatus; label: string; icone: string }> = 
 ];
 
 export default function StatusAtendimento() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
   
   // Captura tanto solicitacaoId quanto id para evitar quebras
@@ -205,7 +208,7 @@ export default function StatusAtendimento() {
     return (
       <View style={styles.center}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ActivityIndicator size="large" color="#38bdf8" />
+        <ActivityIndicator size="large" color={CORES.destaque} />
         <Text style={styles.carregandoTexto}>Buscando dados do atendimento...</Text>
       </View>
     );
@@ -220,13 +223,13 @@ export default function StatusAtendimento() {
       {/* CABEÇALHO */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.botaoVoltar} onPress={() => router.back()}>
-          <MaterialCommunityIcons name="arrow-left" size={20} color="#fff" />
+          <MaterialCommunityIcons name="arrow-left" size={20} color={CORES.texto} />
           <Text style={styles.voltarTexto}>Voltar</Text>
         </TouchableOpacity>
 
         {/* BOTÃO FLUTUANTE DO CHAT */}
         <TouchableOpacity style={styles.botaoChatHeader} onPress={handleAbrirChat}>
-          <MaterialCommunityIcons name="message-text-outline" size={20} color="#38bdf8" />
+          <MaterialCommunityIcons name="message-text-outline" size={20} color={CORES.destaque} />
           <Text style={styles.chatHeaderTexto}>Chat</Text>
         </TouchableOpacity>
       </View>
@@ -244,7 +247,7 @@ export default function StatusAtendimento() {
             />
           ) : (
             <View style={styles.mapaPlaceholder}>
-              <ActivityIndicator size="small" color="#38bdf8" />
+              <ActivityIndicator size="small" color={CORES.destaque} />
               <Text style={styles.mapaTexto}>Carregando mapa...</Text>
             </View>
           )}
@@ -252,7 +255,7 @@ export default function StatusAtendimento() {
 
         {/* BOTÃO PRINCIPAL DE CHAT */}
         <TouchableOpacity style={styles.botaoChatPrincipal} onPress={handleAbrirChat}>
-          <MaterialCommunityIcons name="chat-processing-outline" size={22} color="#fff" />
+          <MaterialCommunityIcons name="chat-processing-outline" size={22} color={CORES.sobrePrimaria} />
           <Text style={styles.botaoChatTexto}>Falar com o Prestador</Text>
         </TouchableOpacity>
 
@@ -274,7 +277,7 @@ export default function StatusAtendimento() {
                   <MaterialCommunityIcons
                     name={etapa.icone as any}
                     size={20}
-                    color={concluida ? "#fff" : "#6b7280"}
+                    color={concluida ? CORES.sobrePrimaria : CORES.textoSuave}
                   />
                 </View>
                 <Text
@@ -318,7 +321,7 @@ export default function StatusAtendimento() {
 
             {solicitacao.status === "EM_ANDAMENTO" && (
               <TouchableOpacity
-                style={[styles.botaoAcao, { backgroundColor: "#16a34a" }]}
+                style={[styles.botaoAcao, { backgroundColor: CORES.sucesso }]}
                 onPress={() => alterarStatus("CONCLUIDO")}
                 disabled={atualizando}
               >
@@ -332,10 +335,11 @@ export default function StatusAtendimento() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
-  center: { flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center" },
-  carregandoTexto: { color: "#9ca3af", marginTop: 12, fontSize: 14 },
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
+  container: { flex: 1, backgroundColor: CORES.fundo },
+  center: { flex: 1, backgroundColor: CORES.fundo, justifyContent: "center", alignItems: "center" },
+  carregandoTexto: { color: CORES.textoSuave, marginTop: 12, fontSize: 14 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -344,40 +348,40 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   botaoVoltar: { flexDirection: "row", alignItems: "center", gap: 6 },
-  voltarTexto: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  voltarTexto: { color: CORES.texto, fontSize: 15, fontWeight: "600" },
   botaoChatHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#1f2937",
+    backgroundColor: CORES.fundo,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: CORES.borda,
   },
-  chatHeaderTexto: { color: "#38bdf8", fontWeight: "600", fontSize: 13 },
+  chatHeaderTexto: { color: CORES.destaque, fontWeight: "600", fontSize: 13 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 30 },
-  titulo: { fontSize: 26, fontWeight: "800", color: "#fff" },
-  subtitulo: { fontSize: 14, color: "#9ca3af", marginBottom: 16 },
+  titulo: { fontSize: 26, fontWeight: "800", color: CORES.texto },
+  subtitulo: { fontSize: 14, color: CORES.textoSuave, marginBottom: 16 },
   mapaContainer: {
     height: 220,
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#1f2937",
+    borderColor: CORES.borda,
   },
   mapaPlaceholder: {
     flex: 1,
-    backgroundColor: "#111827",
+    backgroundColor: CORES.cartao,
     justifyContent: "center",
     alignItems: "center",
   },
-  mapaTexto: { color: "#9ca3af", marginTop: 8, fontSize: 13 },
+  mapaTexto: { color: CORES.textoSuave, marginTop: 8, fontSize: 13 },
   botaoChatPrincipal: {
     flexDirection: "row",
-    backgroundColor: "#2563eb",
+    backgroundColor: CORES.primaria,
     borderRadius: 14,
     paddingVertical: 14,
     justifyContent: "center",
@@ -385,17 +389,17 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 20,
   },
-  botaoChatTexto: { color: "#fff", fontWeight: "700", fontSize: 15 },
-  timeline: { backgroundColor: "#111827", borderRadius: 16, padding: 20, gap: 16 },
+  botaoChatTexto: { color: CORES.sobrePrimaria, fontWeight: "700", fontSize: 15 },
+  timeline: { backgroundColor: CORES.cartao, borderRadius: 16, padding: 20, gap: 16 },
   etapaItem: { flexDirection: "row", alignItems: "center", gap: 14 },
-  iconeCirculo: { width: 38, height: 38, borderRadius: 19, backgroundColor: "#1f2937", justifyContent: "center", alignItems: "center" },
-  iconeConcluido: { backgroundColor: "#2563eb" },
-  iconeAtual: { backgroundColor: "#38bdf8" },
-  etapaTexto: { fontSize: 14, color: "#6b7280", fontWeight: "600" },
-  etapaTextoConcluida: { color: "#d1d5db" },
-  etapaTextoAtual: { color: "#38bdf8", fontWeight: "800" },
-  acoesContainer: { marginTop: 24, backgroundColor: "#111827", padding: 16, borderRadius: 16 },
-  acoesTitulo: { color: "#9ca3af", fontSize: 13, fontWeight: "700", marginBottom: 12 },
-  botaoAcao: { backgroundColor: "#2563eb", borderRadius: 12, paddingVertical: 14, alignItems: "center" },
-  botaoAcaoTexto: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  iconeCirculo: { width: 38, height: 38, borderRadius: 19, backgroundColor: CORES.fundo, justifyContent: "center", alignItems: "center" },
+  iconeConcluido: { backgroundColor: CORES.primaria },
+  iconeAtual: { backgroundColor: CORES.destaque },
+  etapaTexto: { fontSize: 14, color: CORES.textoSuave, fontWeight: "600" },
+  etapaTextoConcluida: { color: CORES.textoSuave },
+  etapaTextoAtual: { color: CORES.destaque, fontWeight: "800" },
+  acoesContainer: { marginTop: 24, backgroundColor: CORES.cartao, padding: 16, borderRadius: 16 },
+  acoesTitulo: { color: CORES.textoSuave, fontSize: 13, fontWeight: "700", marginBottom: 12 },
+  botaoAcao: { backgroundColor: CORES.primaria, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
+  botaoAcaoTexto: { color: CORES.sobrePrimaria, fontWeight: "700", fontSize: 15 },
 });

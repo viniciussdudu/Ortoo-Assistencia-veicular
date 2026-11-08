@@ -22,17 +22,8 @@ import {
   listarCategorias,
   listarPrestadores,
 } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
-const CORES = {
-  fundo: "#000000",
-  cartao: "#111827",
-  borda: "#1f2937",
-  primaria: "#2563eb",
-  destaque: "#38bdf8",
-  texto: "#ffffff",
-  textoSuave: "#9ca3af",
-  erro: "#ef4444",
-};
 
 const PRECO_MAXIMO = 99999.99;
 
@@ -45,6 +36,8 @@ function converterPreco(texto: string): number | null {
 }
 
 export default function CadastrarServico() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
   const { prestadorId } = useLocalSearchParams<{ prestadorId?: string }>();
   const idPrestador = Number(prestadorId);
@@ -136,7 +129,7 @@ export default function CadastrarServico() {
 
   const cabecalho = (
     <TouchableOpacity style={styles.botaoVoltar} onPress={() => router.back()}>
-      <MaterialCommunityIcons name="arrow-left" size={20} color="#fff" />
+      <MaterialCommunityIcons name="arrow-left" size={20} color={CORES.texto} />
       <Text style={styles.voltarTexto}>Voltar</Text>
     </TouchableOpacity>
   );
@@ -278,7 +271,7 @@ export default function CadastrarServico() {
             activeOpacity={0.8}
           >
             {salvando ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={CORES.sobrePrimaria} size="small" />
             ) : (
               <Text style={styles.botaoSalvarTexto}>Salvar serviço</Text>
             )}
@@ -289,7 +282,8 @@ export default function CadastrarServico() {
   );
 }
 
-const styles = StyleSheet.create({
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
   flex: {
     flex: 1,
   },
@@ -414,7 +408,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   botaoSalvarTexto: {
-    color: "#fff",
+    color: CORES.sobrePrimaria,
     fontWeight: "700",
     fontSize: 15,
   },

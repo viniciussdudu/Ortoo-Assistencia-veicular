@@ -3,11 +3,14 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
 const CLIENTE_ID = 1; // TODO: usuário logado
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
 
 export default function AdicionarCartaoForm() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [carregando, setCarregando] = useState(false);
@@ -30,14 +33,14 @@ export default function AdicionarCartaoForm() {
         allowsDelayedPaymentMethods: false,
         appearance: {
           colors: {
-            primary: "#2563eb",
-            background: "#000000",
-            componentBackground: "#111827",
-            componentBorder: "#1f2937",
-            componentText: "#ffffff",
-            primaryText: "#ffffff",
-            secondaryText: "#9ca3af",
-            placeholderText: "#9ca3af",
+            primary: CORES.primaria,
+            background: CORES.fundo,
+            componentBackground: CORES.cartao,
+            componentBorder: CORES.borda,
+            componentText: CORES.texto,
+            primaryText: CORES.texto,
+            secondaryText: CORES.textoSuave,
+            placeholderText: CORES.textoSuave,
           },
           shapes: { borderRadius: 12, borderWidth: 1 },
           primaryButton: { shapes: { borderRadius: 12 } },
@@ -78,25 +81,26 @@ export default function AdicionarCartaoForm() {
         <Text style={styles.titulo}>Novo cartão</Text>
         <Text style={styles.subtitulo}>Insira os dados do cartão para salvar no seu perfil</Text>
         <TouchableOpacity style={styles.botaoSalvar} onPress={adicionarCartao} disabled={carregando}>
-          {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.textoBotao}>Salvar cartão</Text>}
+          {carregando ? <ActivityIndicator color={CORES.sobrePrimaria} /> : <Text style={styles.textoBotao}>Salvar cartão</Text>}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  tela: { flex: 1, backgroundColor: "#000000" },
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
+  tela: { flex: 1, backgroundColor: CORES.fundo },
   conteudo: { flex: 1, paddingHorizontal: 20, paddingTop: 32 },
-  titulo: { fontSize: 28, fontWeight: "800", color: "#ffffff" },
-  subtitulo: { fontSize: 14, color: "#9ca3af", marginTop: 4, marginBottom: 28 },
+  titulo: { fontSize: 28, fontWeight: "800", color: CORES.texto },
+  subtitulo: { fontSize: 14, color: CORES.textoSuave, marginTop: 4, marginBottom: 28 },
   botaoSalvar: {
     height: 52,
-    backgroundColor: "#2563eb",
+    backgroundColor: CORES.primaria,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     marginTop: 16,
   },
-  textoBotao: { color: "#ffffff", fontSize: 16, fontWeight: "700" },
+  textoBotao: { color: CORES.sobrePrimaria, fontSize: 16, fontWeight: "700" },
 });
