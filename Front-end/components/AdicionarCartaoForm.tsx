@@ -1,8 +1,10 @@
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Cores, useEstilos } from "../src/tema";
 
 export default function AdicionarCartaoForm() {
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
 
   return (
@@ -24,8 +26,9 @@ export default function AdicionarCartaoForm() {
   );
 }
 
-const styles = StyleSheet.create({
-  tela: { flex: 1, backgroundColor: "#000000" },
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
+  tela: { flex: 1, backgroundColor: CORES.fundo },
   conteudo: {
     flex: 1,
     alignItems: "center",
@@ -38,15 +41,15 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#111827",
+    backgroundColor: CORES.cartao,
     borderWidth: 1,
-    borderColor: "#1f2937",
+    borderColor: CORES.borda,
     marginBottom: 20,
   },
-  iconeTexto: { color: "#38bdf8", fontSize: 20, fontWeight: "800" },
-  titulo: { color: "#ffffff", fontSize: 24, fontWeight: "800", textAlign: "center" },
+  iconeTexto: { color: CORES.destaque, fontSize: 20, fontWeight: "800" },
+  titulo: { color: CORES.texto, fontSize: 24, fontWeight: "800", textAlign: "center" },
   mensagem: {
-    color: "#9ca3af",
+    color: CORES.textoSuave,
     fontSize: 15,
     lineHeight: 22,
     textAlign: "center",
@@ -59,8 +62,8 @@ const styles = StyleSheet.create({
     minWidth: 160,
     height: 48,
     borderRadius: 12,
-    backgroundColor: "#2563eb",
+    backgroundColor: CORES.primaria,
     marginTop: 28,
   },
-  textoBotao: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
+  textoBotao: { color: CORES.sobrePrimaria, fontSize: 15, fontWeight: "700" },
 });

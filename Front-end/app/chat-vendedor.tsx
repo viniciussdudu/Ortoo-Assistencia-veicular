@@ -15,16 +15,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ApiError, enviarMensagemChat, getUserProfile, listarMensagensChat, MensagemChat } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
-const CORES = {
-  fundo: "#000000",
-  cartao: "#111827",
-  borda: "#1f2937",
-  primaria: "#2563eb",
-  destaque: "#38bdf8",
-  texto: "#ffffff",
-  textoSuave: "#9ca3af",
-};
 
 function formatarHorario(data: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -34,6 +26,8 @@ function formatarHorario(data: string) {
 }
 
 export default function ChatVendedor() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
   const { vendedor, solicitacaoId: solicitacaoIdParam } = useLocalSearchParams<{ vendedor?: string; solicitacaoId?: string }>();
   const listaRef = useRef<ScrollView>(null);
@@ -155,8 +149,8 @@ export default function ChatVendedor() {
                     : styles.balaoRecebido,
                 ]}
               >
-                <Text style={styles.textoMensagem}>{mensagem.conteudo}</Text>
-                <Text style={styles.horarioMensagem}>{formatarHorario(mensagem.criado_em)}</Text>
+                <Text style={[styles.textoMensagem, mensagem.remetente_id === usuarioId && styles.textoEnviado]}>{mensagem.conteudo}</Text>
+                <Text style={[styles.horarioMensagem, mensagem.remetente_id === usuarioId && styles.textoEnviado]}>{formatarHorario(mensagem.criado_em)}</Text>
               </View>
             </View>
           ))}
@@ -189,7 +183,8 @@ export default function ChatVendedor() {
   );
 }
 
-const styles = StyleSheet.create({
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
   tela: { flex: 1, backgroundColor: CORES.fundo },
   flex: { flex: 1 },
   cabecalho: {
@@ -226,7 +221,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#22c55e",
+    backgroundColor: CORES.sucesso,
     borderWidth: 2,
     borderColor: CORES.fundo,
   },
@@ -246,7 +241,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   textoAviso: { color: CORES.textoSuave, fontSize: 12 },
-  erro: { color: "#f87171", textAlign: "center", marginTop: 24 },
+  erro: { color: CORES.erro, textAlign: "center", marginTop: 24 },
   vazio: { color: CORES.textoSuave, textAlign: "center", marginTop: 24 },
   linhaMensagem: { flexDirection: "row", marginBottom: 12 },
   linhaMensagemEnviada: { justifyContent: "flex-end" },
@@ -259,7 +254,8 @@ const styles = StyleSheet.create({
   },
   balaoEnviado: { backgroundColor: CORES.primaria, borderBottomRightRadius: 4 },
   textoMensagem: { color: CORES.texto, fontSize: 15, lineHeight: 21 },
-  horarioMensagem: { color: "#cbd5e1", fontSize: 10, alignSelf: "flex-end", marginTop: 5 },
+  horarioMensagem: { color: CORES.textoSuave, fontSize: 10, alignSelf: "flex-end", marginTop: 5 },
+  textoEnviado: { color: CORES.sobrePrimaria },
   compositor: {
     flexDirection: "row",
     alignItems: "flex-end",

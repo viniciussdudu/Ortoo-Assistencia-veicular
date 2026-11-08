@@ -14,17 +14,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ApiError, Categoria, listarCategorias } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
-const CORES = {
-  fundo: "#000000",
-  cartao: "#111827",
-  borda: "#1f2937",
-  primaria: "#2563eb",
-  destaque: "#38bdf8",
-  destaqueSuave: "rgba(56, 189, 248, 0.1)",
-  texto: "#ffffff",
-  textoSuave: "#9ca3af",
-};
 
 const ICONES: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   "pane seca": "gas-station",
@@ -40,6 +31,8 @@ function iconeDe(nome: string) {
 }
 
 export default function Home() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
 
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -137,7 +130,7 @@ export default function Home() {
             onPress={() => abrirSolicitacao()}
           >
             <View style={styles.sosIcone}>
-              <MaterialCommunityIcons name="lifebuoy" size={26} color="#FFF" />
+              <MaterialCommunityIcons name="lifebuoy" size={26} color={CORES.sobrePrimaria} />
             </View>
             <View style={styles.sosTextos}>
               <Text style={styles.sosTitulo}>Pedir ajuda agora</Text>
@@ -148,7 +141,7 @@ export default function Home() {
             <MaterialCommunityIcons
               name="chevron-right"
               size={24}
-              color="#FFF"
+              color={CORES.sobrePrimaria}
             />
           </TouchableOpacity>
 
@@ -246,7 +239,8 @@ export default function Home() {
   );
 }
 
-const styles = StyleSheet.create({
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
   tela: {
     flex: 1,
     backgroundColor: CORES.fundo,
@@ -328,8 +322,8 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   sosTextos: { flex: 1 },
-  sosTitulo: { color: "#FFF", fontSize: 16, fontWeight: "700" },
-  sosSubtitulo: { color: "#bfdbfe", fontSize: 12, marginTop: 2 },
+  sosTitulo: { color: CORES.sobrePrimaria, fontSize: 16, fontWeight: "700" },
+  sosSubtitulo: { color: CORES.sobrePrimaria, opacity: 0.8, fontSize: 12, marginTop: 2 },
 
   buscaCaixa: {
     flexDirection: "row",
@@ -403,7 +397,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 22,
   },
-  botaoRetryTexto: { color: "#FFF", fontWeight: "600", fontSize: 14 },
+  botaoRetryTexto: { color: CORES.sobrePrimaria, fontWeight: "600", fontSize: 14 },
   vazio: {
     fontSize: 14,
     color: CORES.textoSuave,

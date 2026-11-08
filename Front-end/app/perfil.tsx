@@ -25,20 +25,22 @@
     updateUserProfile,
     UserProfile,
   } from "../src/services/api";
+import { Cores, PreferenciaTema, useEstilos, useTema } from "../src/tema";
 
-  const CORES = {
-    fundo: "#000000",
-    cartao: "#111827",
-    borda: "#1f2937",
-    primaria: "#2563eb",
-    destaque: "#38bdf8",
-    texto: "#ffffff",
-    textoSuave: "#9ca3af",
-    erro: "#ef4444",
-    sucesso: "#22c55e",
-  };
+const OPCOES_TEMA: {
+  valor: PreferenciaTema;
+  rotulo: string;
+  icone: keyof typeof MaterialCommunityIcons.glyphMap;
+}[] = [
+  { valor: "sistema", rotulo: "Sistema", icone: "theme-light-dark" },
+  { valor: "claro", rotulo: "Claro", icone: "white-balance-sunny" },
+  { valor: "escuro", rotulo: "Escuro", icone: "weather-night" },
+];
+
 
   export default function Perfil() {
+  const { cores: CORES, preferencia, definirPreferencia } = useTema();
+  const styles = useEstilos(criarEstilos);
     const router = useRouter();
 
     const [loading, setLoading] = useState(true);
@@ -210,7 +212,7 @@
       style={styles.botaoVoltar}
       onPress={() => router.back()}
       >
-      <MaterialCommunityIcons name="arrow-left" size={20} color="#fff" />
+      <MaterialCommunityIcons name="arrow-left" size={20} color={CORES.texto} />
       <Text style={styles.voltarTexto}>Voltar</Text>
       </TouchableOpacity>
 
@@ -381,6 +383,35 @@
           )}
           </View>
 
+          {/* APARÊNCIA */}
+          <View style={styles.secaoContainer}>
+            <Text style={styles.secaoTitulo}>Aparência</Text>
+            <View style={styles.temaOpcoes}>
+              {OPCOES_TEMA.map((opcao) => {
+                const ativo = preferencia === opcao.valor;
+                return (
+                  <TouchableOpacity
+                    key={opcao.valor}
+                    style={[styles.temaOpcao, ativo && styles.temaOpcaoAtiva]}
+                    onPress={() => definirPreferencia(opcao.valor)}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: ativo }}
+                  >
+                    <MaterialCommunityIcons
+                      name={opcao.icone}
+                      size={20}
+                      color={ativo ? CORES.sobrePrimaria : CORES.textoSuave}
+                    />
+                    <Text style={[styles.temaOpcaoTexto, ativo && styles.temaOpcaoTextoAtivo]}>
+                      {opcao.rotulo}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
           {/* BOTÃO DE SAIR */}
           <TouchableOpacity
           style={[styles.botaoSair, saindo && styles.botaoSairDesabilitado]}
@@ -418,7 +449,7 @@
           <View style={styles.modalCabecalho}>
           <Text style={styles.modalTitulo}>Editar Perfil</Text>
           <TouchableOpacity onPress={() => setModalVisivel(false)}>
-          <MaterialCommunityIcons name="close" size={24} color="#fff" />
+          <MaterialCommunityIcons name="close" size={24} color={CORES.texto} />
           </TouchableOpacity>
           </View>
 
@@ -481,8 +512,8 @@
             <Switch
             value={disponivel}
             onValueChange={setDisponivel}
-            trackColor={{ false: "#374151", true: CORES.primaria }}
-            thumbColor={disponivel ? CORES.destaque : "#9ca3af"}
+            trackColor={{ false: CORES.borda, true: CORES.primaria }}
+            thumbColor={disponivel ? CORES.destaque : CORES.textoSuave}
             />
             </View>
             </>
@@ -497,7 +528,7 @@
           disabled={salvando}
           >
           {salvando ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={CORES.sobrePrimaria} />
           ) : (
             <Text style={styles.botaoSalvarTexto}>Salvar Alterações</Text>
           )}
@@ -510,7 +541,8 @@
     );
   }
 
-  const styles = StyleSheet.create({
+  const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: CORES.fundo,
@@ -554,7 +586,7 @@
       marginBottom: 14,
     },
     avatarTexto: {
-      color: "#ffffff",
+      color: CORES.sobrePrimaria,
       fontSize: 26,
       fontWeight: "800",
     },
@@ -570,7 +602,7 @@
       marginTop: 2,
     },
     tagPerfil: {
-      backgroundColor: "rgba(37, 99, 235, 0.2)",
+      backgroundColor: CORES.destaqueSuave,
                                    borderColor: CORES.primaria,
                                    borderWidth: 1,
                                    borderRadius: 12,
@@ -698,26 +730,26 @@
       paddingVertical: 5,
     },
     statusConcluido: {
-      backgroundColor: "rgba(34, 197, 94, 0.15)",
+      backgroundColor: CORES.sucessoSuave,
     },
     statusTextoConcluido: {
-      color: "#4ade80",
+      color: CORES.sucesso,
       fontSize: 12,
       fontWeight: "700",
     },
     statusCancelado: {
-      backgroundColor: "rgba(239, 68, 68, 0.15)",
+      backgroundColor: CORES.erroSuave,
     },
     statusTextoCancelado: {
-      color: "#f87171",
+      color: CORES.erro,
       fontSize: 12,
       fontWeight: "700",
     },
     statusPadrao: {
-      backgroundColor: "rgba(156, 163, 175, 0.15)",
+      backgroundColor: CORES.borda,
     },
     statusTextoPadrao: {
-      color: "#d1d5db",
+      color: CORES.textoSuave,
       fontSize: 12,
       fontWeight: "700",
     },
@@ -726,9 +758,9 @@
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
-      backgroundColor: "rgba(239, 68, 68, 0.1)",
+      backgroundColor: CORES.erroSuave,
                                    borderWidth: 1,
-                                   borderColor: "rgba(239, 68, 68, 0.3)",
+                                   borderColor: CORES.erro,
                                    borderRadius: 12,
                                    paddingVertical: 14,
                                    marginTop: 12,
@@ -756,7 +788,7 @@
     },
     modalFundo: {
       flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.75)",
+      backgroundColor: CORES.sobreposicao,
                                    justifyContent: "flex-end",
     },
     modalConteudo: {
@@ -791,7 +823,7 @@
       textTransform: "uppercase",
     },
     modalInput: {
-      backgroundColor: "#1f2937",
+      backgroundColor: CORES.fundo,
       color: CORES.texto,
       borderRadius: 8,
       paddingHorizontal: 12,
@@ -811,6 +843,33 @@
       alignItems: "center",
       marginBottom: 16,
     },
+    temaOpcoes: {
+      flexDirection: "row",
+      gap: 8,
+      backgroundColor: CORES.cartao,
+      borderWidth: 1,
+      borderColor: CORES.borda,
+      borderRadius: 12,
+      padding: 6,
+    },
+    temaOpcao: {
+      flex: 1,
+      alignItems: "center",
+      gap: 4,
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    temaOpcaoAtiva: {
+      backgroundColor: CORES.primaria,
+    },
+    temaOpcaoTexto: {
+      color: CORES.textoSuave,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    temaOpcaoTextoAtivo: {
+      color: CORES.sobrePrimaria,
+    },
     botaoSalvarModal: {
       backgroundColor: CORES.primaria,
       borderRadius: 10,
@@ -820,7 +879,7 @@
       marginBottom: 20,
     },
     botaoSalvarTexto: {
-      color: "#fff",
+      color: CORES.sobrePrimaria,
       fontSize: 15,
       fontWeight: "700",
     },

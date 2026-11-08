@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ApiError, register, UserType } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -74,6 +75,8 @@ function validarCNPJ(cnpj: string): boolean {
 }
 
 export default function Cadastro() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
 
   const [tipoUsuario, setTipoUsuario] = useState<UserType>("CLIENTE");
@@ -209,7 +212,7 @@ export default function Cadastro() {
     <ScrollView contentContainerStyle={styles.scrollContent}>
     <View style={styles.formCard}>
     <TouchableOpacity style={styles.botaoVoltar} onPress={() => router.back()}>
-    <MaterialCommunityIcons name="arrow-left" size={20} color="#ffffff" />
+    <MaterialCommunityIcons name="arrow-left" size={20} color={CORES.texto} />
     <Text style={styles.voltarTexto}>Voltar ao login</Text>
     </TouchableOpacity>
 
@@ -218,7 +221,7 @@ export default function Cadastro() {
 
     {errorMessage && (
       <View style={styles.errorContainer}>
-      <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#ef4444" />
+      <MaterialCommunityIcons name="alert-circle-outline" size={18} color={CORES.erro} />
       <Text style={styles.errorText}>{errorMessage}</Text>
       </View>
     )}
@@ -268,7 +271,7 @@ export default function Cadastro() {
     <TextInput
     style={styles.input}
     placeholder={isMecanico ? "Nome do responsável" : "Seu nome completo"}
-    placeholderTextColor="#6b7280"
+    placeholderTextColor={CORES.textoSuave}
     value={nome}
     onChangeText={setNome}
     />
@@ -279,7 +282,7 @@ export default function Cadastro() {
     <TextInput
     style={styles.input}
     placeholder="seu.email@exemplo.com"
-    placeholderTextColor="#6b7280"
+    placeholderTextColor={CORES.textoSuave}
     value={email}
     onChangeText={setEmail}
     keyboardType="email-address"
@@ -292,7 +295,7 @@ export default function Cadastro() {
     <TextInput
     style={styles.input}
     placeholder="(63) 99999-8888"
-    placeholderTextColor="#6b7280"
+    placeholderTextColor={CORES.textoSuave}
     value={telefone}
     onChangeText={setTelefone}
     keyboardType="phone-pad"
@@ -306,7 +309,7 @@ export default function Cadastro() {
     <TextInput
     style={styles.input}
     placeholder={tipoUsuario === "EMPRESA" ? "00.000.000/0001-00" : "000.000.000-00"}
-    placeholderTextColor="#6b7280"
+    placeholderTextColor={CORES.textoSuave}
     value={documento}
     onChangeText={handleDocumentoChange}
     keyboardType="number-pad"
@@ -324,7 +327,7 @@ export default function Cadastro() {
       <TextInput
       style={styles.input}
       placeholder="Nome da sua Oficina / Marca"
-      placeholderTextColor="#6b7280"
+      placeholderTextColor={CORES.textoSuave}
       value={nomeFantasia}
       onChangeText={setNomeFantasia}
       />
@@ -335,7 +338,7 @@ export default function Cadastro() {
       <TextInput
       style={[styles.input, styles.textArea]}
       placeholder="Serviços realizados (ex: Guincho, Elétrica, Troca de Óleo)"
-      placeholderTextColor="#6b7280"
+      placeholderTextColor={CORES.textoSuave}
       value={descricaoEmpresa}
       onChangeText={setDescricaoEmpresa}
       multiline
@@ -348,7 +351,7 @@ export default function Cadastro() {
       <TextInput
       style={styles.input}
       placeholder="15"
-      placeholderTextColor="#6b7280"
+      placeholderTextColor={CORES.textoSuave}
       value={raioAtendimento}
       onChangeText={setRaioAtendimento}
       keyboardType="numeric"
@@ -361,7 +364,7 @@ export default function Cadastro() {
       <TextInput
       style={styles.input}
       placeholder="-10.184"
-      placeholderTextColor="#6b7280"
+      placeholderTextColor={CORES.textoSuave}
       value={latitude}
       onChangeText={setLatitude}
       keyboardType="numeric"
@@ -372,7 +375,7 @@ export default function Cadastro() {
       <TextInput
       style={styles.input}
       placeholder="-48.333"
-      placeholderTextColor="#6b7280"
+      placeholderTextColor={CORES.textoSuave}
       value={longitude}
       onChangeText={setLongitude}
       keyboardType="numeric"
@@ -388,7 +391,7 @@ export default function Cadastro() {
     <TextInput
     style={styles.input}
     placeholder="••••••"
-    placeholderTextColor="#6b7280"
+    placeholderTextColor={CORES.textoSuave}
     value={password}
     onChangeText={setPassword}
     keyboardType="number-pad"
@@ -402,7 +405,7 @@ export default function Cadastro() {
     <TextInput
     style={styles.input}
     placeholder="••••••"
-    placeholderTextColor="#6b7280"
+    placeholderTextColor={CORES.textoSuave}
     value={confirmation}
     onChangeText={setConfirmation}
     keyboardType="number-pad"
@@ -419,7 +422,7 @@ export default function Cadastro() {
     activeOpacity={0.8}
     >
     {submitting ? (
-      <ActivityIndicator color="#fff" size="small" />
+      <ActivityIndicator color={CORES.sobrePrimaria} size="small" />
     ) : (
       <Text style={styles.buttonText}>Finalizar Cadastro</Text>
     )}
@@ -431,8 +434,9 @@ export default function Cadastro() {
   );
 }
 
-export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000000" },
+export const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
+  container: { flex: 1, backgroundColor: CORES.fundo },
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
@@ -447,23 +451,23 @@ export const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 20,
   },
-  voltarTexto: { color: "#ffffff", fontSize: 14, fontWeight: "600" },
-  title: { fontSize: 32, fontWeight: "800", color: "#ffffff", marginBottom: 6 },
-  subtitle: { fontSize: 14, color: "#9ca3af", marginBottom: 24 },
+  voltarTexto: { color: CORES.texto, fontSize: 14, fontWeight: "600" },
+  title: { fontSize: 32, fontWeight: "800", color: CORES.texto, marginBottom: 6 },
+  subtitle: { fontSize: 14, color: CORES.textoSuave, marginBottom: 24 },
   errorContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(239, 68, 68, 0.15)",
-    borderColor: "rgba(239, 68, 68, 0.3)",
+    backgroundColor: CORES.erroSuave,
+    borderColor: CORES.erro,
     borderWidth: 1,
     padding: 12,
     borderRadius: 12,
     marginBottom: 20,
   },
-  errorText: { color: "#f87171", fontSize: 13, flex: 1 },
+  errorText: { color: CORES.erro, fontSize: 13, flex: 1 },
   inputGroup: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: "600", color: "#d1d5db", marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: "600", color: CORES.textoSuave, marginBottom: 6 },
   roleContainer: {
     flexDirection: "row",
     gap: 8,
@@ -473,33 +477,33 @@ export const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: "#1f2937",
+    borderColor: CORES.borda,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#111827",
+    backgroundColor: CORES.cartao,
   },
   roleButtonActive: {
-    borderColor: "#2563eb",
-    backgroundColor: "rgba(37, 99, 235, 0.15)",
+    borderColor: CORES.primaria,
+    backgroundColor: CORES.destaqueSuave,
   },
-  roleText: { fontSize: 12, fontWeight: "600", color: "#9ca3af", textAlign: "center" },
-  roleTextActive: { color: "#38bdf8", fontWeight: "700" },
+  roleText: { fontSize: 12, fontWeight: "600", color: CORES.textoSuave, textAlign: "center" },
+  roleTextActive: { color: CORES.destaque, fontWeight: "700" },
   input: {
     height: 50,
-    backgroundColor: "#111827",
-    borderColor: "#1f2937",
+    backgroundColor: CORES.cartao,
+    borderColor: CORES.borda,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 16,
-    color: "#ffffff",
+    color: CORES.texto,
     fontSize: 15,
   },
   textArea: { height: 80, textAlignVertical: "top", paddingTop: 12 },
   prestadorSection: {
-    backgroundColor: "#0d1117",
+    backgroundColor: CORES.fundo,
     borderWidth: 1,
-    borderColor: "#1f2937",
+    borderColor: CORES.borda,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -507,24 +511,24 @@ export const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#38bdf8",
+    color: CORES.destaque,
     marginBottom: 14,
   },
   row: { flexDirection: "row", gap: 10 },
   halfInput: { flex: 1 },
   button: {
     height: 52,
-    backgroundColor: "#2563eb",
+    backgroundColor: CORES.primaria,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     marginTop: 12,
-    shadowColor: "#2563eb",
+    shadowColor: CORES.primaria,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
-  disabled: { backgroundColor: "#1f2937", shadowOpacity: 0, elevation: 0 },
-  buttonText: { color: "#ffffff", fontSize: 16, fontWeight: "700" },
+  disabled: { backgroundColor: CORES.fundo, shadowOpacity: 0, elevation: 0 },
+  buttonText: { color: CORES.sobrePrimaria, fontSize: 16, fontWeight: "700" },
 });

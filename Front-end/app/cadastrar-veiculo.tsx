@@ -11,21 +11,11 @@ import {
     View,
 } from "react-native";
 import { ApiError, TipoVeiculo, criarVeiculo } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
 // TODO: trocar pelo id do usuario logado quando houver sessao real.
 const CLIENTE_ID = 1;
 
-const CORES = {
-  fundo: "#F3EBDA",
-  primaria: "#1F3140",
-  destaque: "#C85A34",
-  destaqueSuave: "#FBEDE6",
-  cartao: "#FFFFFF",
-  texto: "#1F3140",
-  textoSuave: "#7A7266",
-  borda: "#EAE2D2",
-  critico: "#B3261E",
-};
 
 const TIPOS: { valor: TipoVeiculo; rotulo: string; icone: any }[] = [
   { valor: "CARRO", rotulo: "Carro", icone: "car" },
@@ -38,6 +28,8 @@ const TIPOS: { valor: TipoVeiculo; rotulo: string; icone: any }[] = [
 const PLACA_VALIDA = /^([A-Z]{3}\d{4}|[A-Z]{3}\d[A-Z]\d{2})$/;
 
 export default function CadastrarVeiculo() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
 
   const [tipo, setTipo] = useState<TipoVeiculo>("CARRO");
@@ -133,7 +125,7 @@ export default function CadastrarVeiculo() {
                 <MaterialCommunityIcons
                   name={t.icone}
                   size={22}
-                  color={ativo ? "#FFF" : CORES.destaque}
+                  color={ativo ? CORES.sobrePrimaria : CORES.destaque}
                 />
                 <Text style={[styles.tipoTexto, ativo && styles.tipoTextoAtivo]}>
                   {t.rotulo}
@@ -243,7 +235,8 @@ const sombra = Platform.select({
   },
 }) as object;
 
-const styles = StyleSheet.create({
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
   tela: { flex: 1, backgroundColor: CORES.fundo },
   scroll: { alignItems: "center", paddingVertical: 28 },
   conteudo: { width: "100%", maxWidth: 520, paddingHorizontal: 20 },
@@ -294,7 +287,7 @@ const styles = StyleSheet.create({
   },
   tipoAtivo: { backgroundColor: CORES.destaque, borderColor: CORES.destaque },
   tipoTexto: { fontSize: 13.5, fontWeight: "500", color: CORES.texto },
-  tipoTextoAtivo: { color: "#FFF" },
+  tipoTextoAtivo: { color: CORES.sobrePrimaria },
 
   ajuda: {
     fontSize: 12,
@@ -304,7 +297,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   erro: {
-    color: CORES.critico,
+    color: CORES.erro,
     fontSize: 13,
     marginBottom: 14,
     textAlign: "center",
@@ -317,5 +310,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     ...sombra,
   },
-  botaoTexto: { color: "#FFF", fontWeight: "700", fontSize: 15 },
+  botaoTexto: { color: CORES.sobrePrimaria, fontWeight: "700", fontSize: 15 },
 });

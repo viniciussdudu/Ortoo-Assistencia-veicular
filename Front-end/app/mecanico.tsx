@@ -24,17 +24,8 @@ import {
   Solicitacao,
   UserProfile,
 } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
-const CORES = {
-  fundo: "#000000",
-  cartao: "#111827",
-  borda: "#1f2937",
-  primaria: "#2563eb",
-  destaque: "#38bdf8",
-  texto: "#ffffff",
-  textoSuave: "#9ca3af",
-  erro: "#ef4444",
-};
 
 const ROTULO_TIPO: Record<UserProfile["tipo_usuario"], string> = {
   CLIENTE: "Cliente",
@@ -60,6 +51,8 @@ function iniciais(nome?: string | null) {
 }
 
 export default function Mecanico() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -345,7 +338,7 @@ const carregar = useCallback(async () => {
                           <MaterialCommunityIcons
                             name="check-circle-outline"
                             size={18}
-                            color="#fff"
+                            color={CORES.sobrePrimaria}
                           />
                           <Text style={styles.botaoAcaoCardTexto}>Aceitar</Text>
                         </TouchableOpacity>
@@ -353,7 +346,7 @@ const carregar = useCallback(async () => {
                         <TouchableOpacity
                           style={[
                             styles.botaoAcaoCard,
-                            { backgroundColor: "#16a34a" },
+                            { backgroundColor: CORES.sucesso },
                           ]}
                           onPress={() =>
                             router.push({
@@ -368,7 +361,7 @@ const carregar = useCallback(async () => {
                           <MaterialCommunityIcons
                             name="tow-truck"
                             size={18}
-                            color="#fff"
+                            color={CORES.sobrePrimaria}
                           />
                           <Text style={styles.botaoAcaoCardTexto}>
                             Acompanhar
@@ -491,7 +484,8 @@ const carregar = useCallback(async () => {
   );
 }
 
-const styles = StyleSheet.create({
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: CORES.fundo,
@@ -522,7 +516,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   avatarTexto: {
-    color: "#ffffff",
+    color: CORES.sobrePrimaria,
     fontSize: 26,
     fontWeight: "800",
   },
@@ -611,7 +605,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   botaoAcaoCardTexto: {
-    color: "#ffffff",
+    color: CORES.sobrePrimaria,
     fontWeight: "700",
     fontSize: 14,
   },
@@ -673,18 +667,18 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   statusAtivo: {
-    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    backgroundColor: CORES.sucessoSuave,
   },
   statusInativo: {
-    backgroundColor: "rgba(239, 68, 68, 0.15)",
+    backgroundColor: CORES.erroSuave,
   },
   statusTextoAtivo: {
-    color: "#4ade80",
+    color: CORES.sucesso,
     fontSize: 12,
     fontWeight: "700",
   },
   statusTextoInativo: {
-    color: "#f87171",
+    color: CORES.erro,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -706,9 +700,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    backgroundColor: CORES.erroSuave,
     borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.3)",
+    borderColor: CORES.erro,
     borderRadius: 12,
     paddingVertical: 14,
     marginTop: 12,
