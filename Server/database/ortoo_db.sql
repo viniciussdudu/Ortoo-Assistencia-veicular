@@ -132,3 +132,14 @@ CREATE TABLE IF NOT EXISTS manutencoes_veiculo (
     FOREIGN KEY (veiculo_id) REFERENCES veiculos(id) ON DELETE CASCADE,
     FOREIGN KEY (solicitacao_id) REFERENCES solicitacoes(id)
 );
+
+-- 10. Tabela de Mensagens do Chat de Suporte Central
+CREATE TABLE IF NOT EXISTS suporte_mensagens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    remetente_tipo ENUM('USUARIO', 'SUPORTE') NOT NULL DEFAULT 'USUARIO',
+    conteudo TEXT NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    INDEX idx_suporte_usuario_data (usuario_id, criado_em)
+);
