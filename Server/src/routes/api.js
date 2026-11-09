@@ -38,6 +38,7 @@ router.post("/solicitacoes/:id/chat", requireAuth, chatController.enviarMensagem
 
 // Rotas de Usuário / Perfil
 router.get("/usuario/perfil", requireAuth, userController.getProfile);
+router.put("/usuario/perfil", requireAuth, userController.updateProfile);
 
 // Rotas de Solicitações e Categorias
 router.get("/categorias", solicitacaoController.listarCategorias);

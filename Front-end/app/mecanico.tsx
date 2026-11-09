@@ -237,6 +237,13 @@ const carregar = useCallback(async () => {
             {ROTULO_TIPO[usuario.tipo_usuario]} - {usuario.tipo_documento}{" "}
             {usuario.documento}
           </Text>
+          <TouchableOpacity
+            style={styles.botaoAcao}
+            accessibilityRole="button"
+            onPress={() => router.push("/perfil")}
+          >
+            <Text style={styles.botaoAcaoTexto}>Editar dados da conta</Text>
+          </TouchableOpacity>
         </View>
 
         {usuario.tipo_usuario === "CLIENTE" ? (

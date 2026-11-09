@@ -55,9 +55,10 @@ export type UserProfile = {
 };
 
 export type UpdateProfileInput = {
-  usuario_id?: number;
   nome: string;
+  email: string;
   telefone: string;
+  senha_atual?: string;
   foto_url?: string;
   // Campos de prestador
   nome_fantasia?: string;

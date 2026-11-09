@@ -51,7 +51,12 @@ const OPCOES_TEMA: {
     const [modalVisivel, setModalVisivel] = useState(false);
     const [salvando, setSalvando] = useState(false);
     const [nome, setNome] = useState("");
+    const [email, setEmail] = useState("");
     const [telefone, setTelefone] = useState("");
+    const [senhaAtual, setSenhaAtual] = useState("");
+    const [erroEdicao, setErroEdicao] = useState("");
+    const [avisoPerfil, setAvisoPerfil] = useState("");
+    const emailAlterado = !!usuario && email.trim().toLowerCase() !== usuario.email.toLowerCase();
     const [nomeFantasia, setNomeFantasia] = useState("");
     const [descricaoEmpresa, setDescricaoEmpresa] = useState("");
     const [raioAtendimento, setRaioAtendimento] = useState("");
@@ -81,7 +86,11 @@ const OPCOES_TEMA: {
     const abrirModalEdicao = () => {
       if (!usuario) return;
       setNome(usuario.nome || "");
+      setEmail(usuario.email);
       setTelefone(usuario.telefone || "");
+      setSenhaAtual("");
+      setErroEdicao("");
+      setAvisoPerfil("");
       setNomeFantasia(usuario.prestador?.nome_fantasia || "");
       setDescricaoEmpresa(usuario.prestador?.descricao_empresa || "");
       setRaioAtendimento(
@@ -94,37 +103,38 @@ const OPCOES_TEMA: {
     };
 
     const handleSalvarPerfil = async () => {
-      if (!nome.trim() || !telefone.trim()) {
-        Alert.alert("Atenção", "Nome e telefone são obrigatórios.");
+      if (!usuario || salvando) return;
+      if (!nome.trim() || !email.trim() || !telefone.trim()) {
+        setErroEdicao("Preencha nome, e-mail e telefone.");
+        return;
+      }
+      if (emailAlterado && !/^\d{6}$/.test(senhaAtual)) {
+        setErroEdicao("Informe a senha atual de seis dígitos para alterar o e-mail.");
         return;
       }
 
       try {
+        setErroEdicao("");
         setSalvando(true);
+        const isPrestador = usuario.tipo_usuario !== "CLIENTE";
         await updateUserProfile({
-          usuario_id: usuario?.id,
           nome: nome.trim(),
-                                telefone: telefone.trim(),
-                                nome_fantasia:
-                                usuario?.tipo_usuario !== "CLIENTE" ? nomeFantasia.trim() : undefined,
-                                descricao_empresa:
-                                usuario?.tipo_usuario !== "CLIENTE"
-                                ? descricaoEmpresa.trim()
-                                : undefined,
-                                raio_atendimento_km:
-                                usuario?.tipo_usuario !== "CLIENTE"
-                                ? Number(raioAtendimento) || 15
-                                : undefined,
-                                disponivel:
-                                usuario?.tipo_usuario !== "CLIENTE" ? disponivel : undefined,
+          email: email.trim().toLowerCase(),
+          telefone: telefone.trim(),
+          senha_atual: emailAlterado ? senhaAtual : undefined,
+          nome_fantasia: isPrestador ? nomeFantasia.trim() : undefined,
+          descricao_empresa: isPrestador ? descricaoEmpresa.trim() : undefined,
+          raio_atendimento_km: isPrestador ? Number(raioAtendimento) || 15 : undefined,
+          disponivel: isPrestador ? disponivel : undefined,
         });
 
-        Alert.alert("Sucesso", "Perfil atualizado com sucesso!");
+        setSenhaAtual("");
+        setUsuario({ ...usuario, nome: nome.trim(), email: email.trim().toLowerCase(), telefone: telefone.trim() });
+        setAvisoPerfil(emailAlterado ? "Perfil atualizado. Use o novo e-mail no próximo login." : "Perfil atualizado com sucesso.");
         setModalVisivel(false);
         await fetchPerfil();
       } catch (error) {
-        Alert.alert(
-          "Erro ao salvar",
+        setErroEdicao(
           error instanceof ApiError ? error.message : "Tente novamente."
         );
       } finally {
@@ -255,6 +265,7 @@ const OPCOES_TEMA: {
           />
           <Text style={styles.botaoAcaoTexto}>Editar perfil</Text>
           </TouchableOpacity>
+          {!!avisoPerfil && <Text accessibilityLiveRegion="polite" style={[styles.infoTexto, { color: CORES.sucesso }]}>{avisoPerfil}</Text>}
           </View>
 
           {/* DADOS ESPECÍFICOS DO PRESTADOR */}
@@ -459,19 +470,50 @@ const OPCOES_TEMA: {
           style={styles.modalInput}
           value={nome}
           onChangeText={setNome}
+          accessibilityLabel="Nome"
+          maxLength={100}
           placeholder="Seu nome"
           placeholderTextColor={CORES.textoSuave}
+          />
+
+          <Text style={styles.modalLabel}>E-mail</Text>
+          <TextInput
+            style={styles.modalInput}
+            accessibilityLabel="E-mail"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            maxLength={100}
           />
 
           <Text style={styles.modalLabel}>Telefone / WhatsApp</Text>
           <TextInput
           style={styles.modalInput}
+          accessibilityLabel="Telefone / WhatsApp"
           value={telefone}
           onChangeText={setTelefone}
+          maxLength={20}
           placeholder="Ex: 63999998888"
           placeholderTextColor={CORES.textoSuave}
           keyboardType="phone-pad"
           />
+
+          {emailAlterado && (
+            <>
+              <Text style={styles.modalLabel}>Senha atual para alterar o e-mail</Text>
+              <TextInput
+                style={styles.modalInput}
+                accessibilityLabel="Senha atual"
+                value={senhaAtual}
+                onChangeText={setSenhaAtual}
+                secureTextEntry
+                keyboardType="number-pad"
+                maxLength={6}
+              />
+            </>
+          )}
 
           {isPrestador && (
             <>
@@ -519,6 +561,7 @@ const OPCOES_TEMA: {
             </>
           )}
 
+          {!!erroEdicao && <Text accessibilityRole="alert" style={{ color: CORES.erro, marginTop: 12 }}>{erroEdicao}</Text>}
           <TouchableOpacity
           style={[
             styles.botaoSalvarModal,
