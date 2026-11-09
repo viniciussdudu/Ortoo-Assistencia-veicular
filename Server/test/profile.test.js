@@ -31,7 +31,7 @@ test("cliente atualiza contato sem senha e o corpo não pode escolher outra cont
   assert.equal(status, 200);
   const escritas = operacoes.filter(op => op.sql?.startsWith("UPDATE"));
   assert.equal(escritas.length, 1);
-  assert.deepEqual(escritas[0].params, ["Pessoa Teste", dados.email, dados.telefone, null, 42]);
+  assert.deepEqual(escritas[0].params, ["Pessoa Teste", dados.email, dados.telefone, 42]);
   assert.match(escritas[0].sql, /WHERE id = \?$/);
   assert.ok(!escritas[0].sql.includes("documento"));
   assert.deepEqual(operacoes.slice(-2), ["commit", "release"]);

@@ -54,6 +54,9 @@ app.use((req, res) => {
 
 // Tratamento Global de Erros (500)
 app.use((error, req, res, next) => {
+  if (error.type === "entity.too.large") {
+    return res.status(413).json({ erro: "O arquivo excede o tamanho permitido." });
+  }
   console.error(error);
   res.status(500).json({ erro: "Erro interno do servidor." });
 });

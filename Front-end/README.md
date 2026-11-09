@@ -18,5 +18,8 @@ Aplicativo mobile e web construído com Expo SDK 54, React Native e Expo Router.
 ## API disponível
 
 - `POST /api/auth/cadastro`
+- `PUT /api/usuario/perfil/foto` (autenticado): envia a imagem em Base64 como `text/plain`.
+
+Clientes e mecânicos podem selecionar ou trocar a foto no topo do próprio perfil. A imagem é salva na hora. Use JPG, PNG ou WebP com até 5 MB. O servidor armazena os arquivos em `Server/uploads/perfis` e mantém a referência no campo `usuarios.foto_url`; preserve essa pasta ao mover ou restaurar a API.
 
 O cliente HTTP em `src/services/api.ts` concentra o cadastro. A API valida nome, e-mail, CPF e uma senha numérica de exatamente seis dígitos antes de armazenar a conta no MySQL.

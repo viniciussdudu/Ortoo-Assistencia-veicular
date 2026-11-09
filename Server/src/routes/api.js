@@ -5,6 +5,7 @@ const { requireAuth } = require("../middlewares/auth");
 const prestadorController = require("../controllers/prestadorControllers");
 const authController = require("../controllers/authController");
 const userController = require("../controllers/userController");
+const { pastaFotos, salvarFoto } = require("../controllers/fotoPerfilController");
 const solicitacaoController = require("../controllers/solicitacaoController");
 const paymentController = require("../controllers/paymentController");
 const veiculoController = require("../controllers/veiculoController");
@@ -40,6 +41,12 @@ router.post("/solicitacoes/:id/chat", requireAuth, chatController.enviarMensagem
 // Rotas de Usuário / Perfil
 router.get("/usuario/perfil", requireAuth, userController.getProfile);
 router.put("/usuario/perfil", requireAuth, userController.updateProfile);
+router.put("/usuario/perfil/foto", requireAuth, express.text({ limit: "7mb" }), salvarFoto);
+router.use("/usuario/fotos", express.static(pastaFotos, {
+  index: false,
+  redirect: false,
+  setHeaders(res) { res.setHeader("X-Content-Type-Options", "nosniff"); },
+}));
 
 // Rotas de Solicitações e Categorias
 router.get("/categorias", solicitacaoController.listarCategorias);

@@ -26,6 +26,7 @@
     UserProfile,
   } from "../src/services/api";
 import { Cores, PreferenciaTema, useEstilos, useTema } from "../src/tema";
+import { FotoPerfil } from "../components/FotoPerfil";
 
 const OPCOES_TEMA: {
   valor: PreferenciaTema;
@@ -228,18 +229,7 @@ const OPCOES_TEMA: {
 
       {/* HEADER PERFIL */}
       <View style={styles.header}>
-      <View style={styles.avatar}>
-      <Text style={styles.avatarTexto}>
-      {usuario.nome
-        ? usuario.nome
-        .split(" ")
-        .map((parte: string) => parte[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-        : "??"}
-        </Text>
-        </View>
+        <FotoPerfil nome={usuario.nome} foto={usuario.foto_url} onChange={(foto_url) => setUsuario((atual) => atual && { ...atual, foto_url })} />
 
         <Text style={styles.nome}>{usuario.nome}</Text>
         <Text style={styles.infoTexto}>{usuario.email}</Text>
@@ -632,22 +622,6 @@ const OPCOES_TEMA: {
     header: {
       alignItems: "center",
       marginBottom: 32,
-    },
-    avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: CORES.primaria,
-      alignItems: "center",
-      justifyContent: "center",
-      borderWidth: 2,
-      borderColor: CORES.destaque,
-      marginBottom: 14,
-    },
-    avatarTexto: {
-      color: CORES.sobrePrimaria,
-      fontSize: 26,
-      fontWeight: "800",
     },
     nome: {
       fontSize: 22,

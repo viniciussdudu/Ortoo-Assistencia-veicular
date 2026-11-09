@@ -75,7 +75,6 @@ async function updateProfile(req, res, next) {
     email: emailInput,
     telefone: telefoneInput,
     senha_atual,
-    foto_url,
     nome_fantasia,
     descricao_empresa,
     raio_atendimento_km,
@@ -119,8 +118,8 @@ async function updateProfile(req, res, next) {
     }
 
     await connection.execute(
-      "UPDATE usuarios SET nome = ?, email = ?, telefone = ?, foto_url = COALESCE(?, foto_url) WHERE id = ?",
-      [nome, email, telefone, foto_url || null, usuarioId]
+      "UPDATE usuarios SET nome = ?, email = ?, telefone = ? WHERE id = ?",
+      [nome, email, telefone, usuarioId]
     );
 
     if (usuario.tipo_usuario !== "CLIENTE") {

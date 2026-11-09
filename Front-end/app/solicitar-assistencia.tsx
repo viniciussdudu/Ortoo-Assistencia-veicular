@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,70 +15,107 @@ import {
 import {
   ApiError,
   Categoria,
-  criarSolicitacao,
-  getUserProfile,
   listarCategorias,
 } from "../src/services/api";
 import { Cores, useEstilos, useTema } from "../src/tema";
+
+const TEMPO_LIMITE_MS = 15000;
+type Coordenadas = { latitude: number; longitude: number };
+
+async function obterLocalizacao(estaAtivo: () => boolean): Promise<Coordenadas> {
+  if (Platform.OS === "web") {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      throw new Error("Localização indisponível. Abra o app em localhost ou HTTPS.");
+    }
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => resolve(coords),
+        (erro) => reject(new Error(erro.code === 1
+          ? "Permissão de localização negada. Habilite-a no navegador e tente novamente."
+          : "Não foi possível obter sua localização. Verifique o GPS e tente novamente.")),
+        { timeout: TEMPO_LIMITE_MS, maximumAge: 0 },
+      );
+    });
+  }
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (!estaAtivo()) throw new Error("Busca encerrada.");
+  if (status !== "granted") {
+    throw new Error("Permissão de localização negada. Habilite-a nas configurações e tente novamente.");
+  }
+  const { coords } = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+  return coords;
+}
 
 export default function SolicitarAssistencia() {
   const { cores: CORES } = useTema();
   const styles = useEstilos(criarEstilos);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-    const params = useLocalSearchParams<{ categoriaId?: string }>();
+  const params = useLocalSearchParams<{ categoriaId?: string }>();
   const [categoriaId, setCategoriaId] = useState<number | null>(
     params.categoriaId ? Number(params.categoriaId) : null,
   );
   const [descricao, setDescricao] = useState("");
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const [enviando, setEnviando] = useState(false);
+  const [coords, setCoords] = useState<Coordenadas | null>(null);
+  const [carregandoCategorias, setCarregandoCategorias] = useState(true);
+  const [erroCategorias, setErroCategorias] = useState<string | null>(null);
+  const [tentativaCategorias, setTentativaCategorias] = useState(0);
+  const [buscandoLocalizacao, setBuscandoLocalizacao] = useState(false);
+  const [tentativaLocalizacao, setTentativaLocalizacao] = useState(0);
   const [erroLocalizacao, setErroLocalizacao] = useState<string | null>(null);
 
   useEffect(() => {
-    async function carregar() {
-      try {
-        setCategorias(await listarCategorias());
-      } catch (erro) {
-        Alert.alert("Erro", erro instanceof ApiError ? erro.message : "Falha ao carregar categorias.");
-      }
-
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setErroLocalizacao("Permissão de localização negada. Habilite nas configurações para continuar.");
-      } else {
-        try {
-          const posicao = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          setCoords({
-            latitude: posicao.coords.latitude,
-            longitude: posicao.coords.longitude,
-          });
-        } catch {
-          setErroLocalizacao("Não foi possível obter sua localização.");
+    const controller = new AbortController();
+    setCarregandoCategorias(true);
+    setErroCategorias(null);
+    const timer = setTimeout(() => {
+      controller.abort();
+      setErroCategorias("A lista de serviços demorou para responder. Tente novamente.");
+      setCarregandoCategorias(false);
+    }, TEMPO_LIMITE_MS);
+    void listarCategorias(controller.signal)
+      .then((lista) => {
+        if (controller.signal.aborted) return;
+        if (!Array.isArray(lista)) throw new Error("Resposta inválida.");
+        setCategorias(lista);
+      })
+      .catch((erro) => {
+        if (!controller.signal.aborted) {
+          setErroCategorias(erro instanceof ApiError ? erro.message : "Não foi possível carregar os serviços.");
         }
-      }
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        if (!controller.signal.aborted) setCarregandoCategorias(false);
+      });
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [tentativaCategorias]);
 
-      setCarregando(false);
-    }
+  useEffect(() => {
+    if (!tentativaLocalizacao) return;
+    let ativo = true;
+    setBuscandoLocalizacao(true);
+    setErroLocalizacao(null);
+    const timer = setTimeout(() => {
+      ativo = false;
+      setErroLocalizacao("Não foi possível localizar você a tempo. Verifique a permissão de localização e tente novamente.");
+      setBuscandoLocalizacao(false);
+    }, TEMPO_LIMITE_MS);
+    void obterLocalizacao(() => ativo)
+      .then((posicao) => { if (ativo) setCoords(posicao); })
+      .catch((erro) => {
+        if (ativo) setErroLocalizacao(erro instanceof Error ? erro.message : "Não foi possível obter sua localização.");
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        if (ativo) setBuscandoLocalizacao(false);
+      });
+    return () => { ativo = false; clearTimeout(timer); };
+  }, [tentativaLocalizacao]);
 
-    carregar();
-  }, []);
+  const podeContinuar = !!coords && !erroCategorias && categorias.some((categoria) => categoria.id === categoriaId);
 
-  async function enviar() {
-    if (!categoriaId) {
-      Alert.alert("Atenção", "Escolha o tipo de problema.");
-      ShowAlert("Atenção", "Escolha o tipo de problema.");
-      return;
-    }
-    if (!coords) {
-      Alert.alert("Atenção", "Precisamos da sua localização para acionar um prestador.");
-      ShowAlert("Atenção", "Precisamos da sua localização para acionar um prestador.");
-      return;
-    }
-
-    setEnviando(true);
+  function enviar() {
+    if (!podeContinuar || !categoriaId) return;
     try {
       // O atendimento é criado após o cliente escolher o prestador no mapa.
       router.push({
@@ -86,26 +123,26 @@ export default function SolicitarAssistencia() {
         params: { categoria_id: categoriaId },
       });
     } catch (erro) {
-      Alert.alert("Erro", erro instanceof ApiError ? erro.message : "Falha ao enviar a solicitação.");
-      ShowAlert("Erro", erro instanceof ApiError ? erro.message : "Falha ao enviar a solicitação.")
-    } finally {
-      setEnviando(false);
+      ShowAlert("Erro", erro instanceof ApiError ? erro.message : "Não foi possível abrir o mapa.");
     }
-  }
-
-  if (carregando) {
-    return (
-      <View style={[styles.container, styles.centro]}>
-        <ActivityIndicator size="large" color={CORES.destaque} />
-      </View>
-    );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.titulo}>Solicitar assistência</Text>
+      <Pressable accessibilityRole="button" onPress={() => router.canGoBack() ? router.back() : router.replace("/home")}>
+        <Text style={styles.acao}>Voltar</Text>
+      </Pressable>
 
       <Text style={styles.rotulo}>Qual é o problema?</Text>
+      {carregandoCategorias ? <ActivityIndicator accessibilityLabel="Carregando serviços" color={CORES.destaque} /> : erroCategorias ? (
+        <View>
+          <Text accessibilityRole="alert" style={styles.localErro}>{erroCategorias}</Text>
+          <Pressable accessibilityRole="button" onPress={() => setTentativaCategorias((n) => n + 1)}>
+            <Text style={styles.acao}>Recarregar serviços</Text>
+          </Pressable>
+        </View>
+      ) : !categorias.length && <Text style={styles.localTexto}>Nenhum serviço disponível.</Text>}
       <View style={styles.grade}>
         {categorias.map((categoria) => (
           <Pressable
@@ -137,16 +174,25 @@ export default function SolicitarAssistencia() {
             Localização capturada: {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
           </Text>
         ) : (
-          <Text style={styles.localErro}>{erroLocalizacao}</Text>
+          <>
+            <Text accessibilityLiveRegion="polite" style={erroLocalizacao ? styles.localErro : styles.localTexto}>
+              {erroLocalizacao ?? (buscandoLocalizacao ? "Buscando sua localização…" : "Precisamos da sua localização para encontrar prestadores próximos.")}
+            </Text>
+            {!buscandoLocalizacao && (
+              <Pressable accessibilityRole="button" onPress={() => setTentativaLocalizacao((n) => n + 1)}>
+                <Text style={styles.acao}>{erroLocalizacao ? "Tentar localização novamente" : "Usar minha localização"}</Text>
+              </Pressable>
+            )}
+          </>
         )}
       </View>
 
       <Pressable
         onPress={enviar}
-        disabled={enviando || !coords}
-        style={[styles.botao, (enviando || !coords) && styles.botaoDesabilitado]}
+        disabled={!podeContinuar}
+        style={[styles.botao, !podeContinuar && styles.botaoDesabilitado]}
       >
-        <Text style={styles.botaoTexto}>{enviando ? "Enviando..." : "Pedir ajuda agora"}</Text>
+        <Text style={styles.botaoTexto}>Pedir ajuda agora</Text>
       </Pressable>
     </ScrollView>
   );
@@ -155,7 +201,7 @@ export default function SolicitarAssistencia() {
 const criarEstilos = (CORES: Cores) =>
   StyleSheet.create({
   container: { padding: 24, gap: 16 },
-  centro: { flex: 1, justifyContent: "center" },
+  acao: { color: CORES.destaque, fontWeight: "700", paddingVertical: 8 },
   titulo: { fontSize: 24, fontWeight: "700", color: CORES.texto },
   rotulo: { fontSize: 15, fontWeight: "600", color: CORES.texto, marginTop: 8 },
   grade: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

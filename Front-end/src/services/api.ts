@@ -59,7 +59,6 @@ export type UpdateProfileInput = {
   email: string;
   telefone: string;
   senha_atual?: string;
-  foto_url?: string;
   // Campos de prestador
   nome_fantasia?: string;
   descricao_empresa?: string;
@@ -91,6 +90,8 @@ function getApiUrl() {
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
+  textBody?: string;
+  signal?: AbortSignal;
 };
 
 async function request<T>(
@@ -103,11 +104,12 @@ async function request<T>(
   try {
     response = await fetch(`${getApiUrl()}${path}`, {
       method: options.method ?? "GET",
+      signal: options.signal,
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": options.textBody === undefined ? "application/json" : "text/plain",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      ...(options.body === undefined
+      ...(options.textBody !== undefined ? { body: options.textBody } : options.body === undefined
       ? {}
       : { body: JSON.stringify(options.body) }),
     });
@@ -183,6 +185,14 @@ export function updateUserProfile(input: UpdateProfileInput) {
   });
 }
 
+export function salvarFotoPerfil(base64: string) {
+  return request<{ foto_url: string }>("/usuario/perfil/foto", { method: "PUT", textBody: base64 });
+}
+
+export function enderecoFotoPerfil(foto: string) {
+  return foto.startsWith("/usuario/fotos/") ? `${getApiUrl()}${foto}` : foto;
+}
+
 export async function logout(): Promise<{ sucesso: boolean }> {
   try {
     await request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
@@ -203,8 +213,8 @@ export type Categoria = {
   icone_url?: string | null;
 };
 
-export function listarCategorias() {
-  return request<Categoria[]>("/categorias");
+export function listarCategorias(signal?: AbortSignal) {
+  return request<Categoria[]>("/categorias", { signal });
 }
 
 export type ServicoOferecido = {
