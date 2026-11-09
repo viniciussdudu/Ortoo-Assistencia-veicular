@@ -341,6 +341,22 @@ const OPCOES_TEMA: {
             </View>
           )}
 
+          <View style={styles.secaoContainer}>
+            <Text style={styles.secaoTitulo}>Ajuda &amp; Atendimento</Text>
+            <TouchableOpacity
+              style={styles.cardBotao}
+              onPress={() => router.push("/suporte")}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+            >
+              <View style={styles.cardHeader}>
+                <MaterialCommunityIcons name="headset" size={22} color={CORES.destaque} />
+                <Text style={styles.cardBotaoTexto}>Falar com o Suporte</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={CORES.textoSuave} />
+            </TouchableOpacity>
+          </View>
+
           {/* FORMAS DE PAGAMENTO */}
           <View style={styles.secaoContainer}>
           <Text style={styles.secaoTitulo}>Formas de Pagamento</Text>

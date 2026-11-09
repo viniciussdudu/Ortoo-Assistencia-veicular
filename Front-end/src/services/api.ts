@@ -454,3 +454,26 @@ export type CadastrarServicoInput = {
 export function cadastrarServico(input: CadastrarServicoInput) {
   return request<ServicoOferecido>("/servicos", { method: "POST", body: input });
 }
+
+/* ==================== SUPORTE CENTRAL ==================== */
+
+export type TipoRemetenteSuporte = "USUARIO" | "SUPORTE";
+
+export type MensagemSuporte = {
+  id: number;
+  usuario_id: number;
+  remetente_tipo: TipoRemetenteSuporte;
+  conteudo: string;
+  criado_em: string;
+};
+
+export function listarMensagensSuporte() {
+  return request<MensagemSuporte[]>("/suporte/mensagens");
+}
+
+export function enviarMensagemSuporte(conteudo: string) {
+  return request<MensagemSuporte>("/suporte/mensagens", {
+    method: "POST",
+    body: { conteudo },
+  });
+}
