@@ -1,4 +1,7 @@
 const db = require("../config/db");
+const bcrypt = require("bcryptjs");
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function getProfile(req, res, next) {
   try {
@@ -10,7 +13,7 @@ async function getProfile(req, res, next) {
 
 
     const [usuarios] = await db.execute(
-      "SELECT id, nome, email, telefone, documento, tipo_documento, tipo_usuario FROM usuarios WHERE id = ?",
+      "SELECT id, nome, email, telefone, documento, tipo_documento, tipo_usuario, foto_url FROM usuarios WHERE id = ?",
       [usuarioId]
     );
 
@@ -68,37 +71,58 @@ async function updateProfile(req, res, next) {
     return res.status(401).json({ erro: "Usuário não autenticado." });
   }
   const {
-    nome,
-    telefone,
-    foto_url,
+    nome: nomeInput,
+    email: emailInput,
+    telefone: telefoneInput,
+    senha_atual,
     nome_fantasia,
     descricao_empresa,
     raio_atendimento_km,
     disponivel,
-  } = req.body;
+  } = req.body ?? {};
 
-  if (!nome || !telefone) {
-    return res.status(400).json({ erro: "Nome e telefone são obrigatórios." });
+  const nome = typeof nomeInput === "string" ? nomeInput.trim() : "";
+  const email = typeof emailInput === "string" ? emailInput.trim().toLowerCase() : "";
+  const telefone = typeof telefoneInput === "string" ? telefoneInput.trim() : "";
+  const digitosTelefone = telefone.replace(/\D/g, "");
+  if (!nome || nome.length > 100) {
+    return res.status(400).json({ erro: "Informe um nome com até 100 caracteres." });
+  }
+  if (email.length > 100 || !EMAIL_PATTERN.test(email)) {
+    return res.status(400).json({ erro: "Informe um e-mail válido com até 100 caracteres." });
+  }
+  if (telefone.length > 20 || !/^\+?[\d ().-]+$/.test(telefone) || !/^\d{10,15}$/.test(digitosTelefone)) {
+    return res.status(400).json({ erro: "Informe um telefone válido com DDD." });
   }
 
-  const connection = await db.getConnection();
+  let connection;
 
   try {
+    connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // 1. Atualiza dados comuns na tabela usuarios
-    await connection.execute(
-      "UPDATE usuarios SET nome = ?, telefone = ?, foto_url = COALESCE(?, foto_url) WHERE id = ?",
-                             [nome.trim(), telefone.trim(), foto_url || null, usuarioId]
-    );
-
-    // 2. Se for perfil de prestador, atualiza também a tabela perfis_prestadores
     const [usuarios] = await connection.execute(
-      "SELECT tipo_usuario FROM usuarios WHERE id = ?",
+      "SELECT tipo_usuario, email, senha FROM usuarios WHERE id = ? FOR UPDATE",
       [usuarioId]
     );
+    const usuario = usuarios[0];
+    if (!usuario) {
+      await connection.rollback();
+      return res.status(404).json({ erro: "Usuário não encontrado." });
+    }
 
-    if (usuarios.length > 0 && usuarios[0].tipo_usuario !== "CLIENTE") {
+    if (email !== usuario.email.toLowerCase() &&
+        (typeof senha_atual !== "string" || !/^\d{6}$/.test(senha_atual) || !(await bcrypt.compare(senha_atual, usuario.senha)))) {
+      await connection.rollback();
+      return res.status(403).json({ erro: "Informe a senha atual correta para alterar o e-mail." });
+    }
+
+    await connection.execute(
+      "UPDATE usuarios SET nome = ?, email = ?, telefone = ? WHERE id = ?",
+      [nome, email, telefone, usuarioId]
+    );
+
+    if (usuario.tipo_usuario !== "CLIENTE") {
       await connection.execute(
         `UPDATE perfis_prestadores
         SET nome_fantasia = COALESCE(?, nome_fantasia),
@@ -123,10 +147,19 @@ async function updateProfile(req, res, next) {
       mensagem: "Perfil atualizado com sucesso!",
     });
   } catch (error) {
-    await connection.rollback();
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        return next(rollbackError);
+      }
+    }
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ erro: "Este e-mail já está em uso por outra conta." });
+    }
     return next(error);
   } finally {
-    connection.release();
+    connection?.release();
   }
 }
 

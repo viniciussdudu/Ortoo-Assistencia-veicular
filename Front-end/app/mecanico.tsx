@@ -25,6 +25,7 @@ import {
   UserProfile,
 } from "../src/services/api";
 import { Cores, useEstilos, useTema } from "../src/tema";
+import { FotoPerfil } from "../components/FotoPerfil";
 
 
 const ROTULO_TIPO: Record<UserProfile["tipo_usuario"], string> = {
@@ -37,17 +38,6 @@ function formatarPreco(valor: number | string) {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) return "—";
   return `R$ ${numero.toFixed(2).replace(".", ",")}`;
-}
-
-function iniciais(nome?: string | null) {
-  if (!nome) return "??";
-  return nome
-    .split(" ")
-    .filter(Boolean)
-    .map((parte) => parte[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 export default function Mecanico() {
@@ -224,9 +214,7 @@ const carregar = useCallback(async () => {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarTexto}>{iniciais(nomeExibido)}</Text>
-          </View>
+          <FotoPerfil nome={nomeExibido} foto={usuario.foto_url} onChange={(foto_url) => setUsuario((atual) => atual && { ...atual, foto_url })} />
 
           <Text style={styles.nome}>{nomeExibido}</Text>
           <Text style={styles.infoTexto}>{usuario.email}</Text>
@@ -237,6 +225,13 @@ const carregar = useCallback(async () => {
             {ROTULO_TIPO[usuario.tipo_usuario]} - {usuario.tipo_documento}{" "}
             {usuario.documento}
           </Text>
+          <TouchableOpacity
+            style={styles.botaoAcao}
+            accessibilityRole="button"
+            onPress={() => router.push("/perfil")}
+          >
+            <Text style={styles.botaoAcaoTexto}>Editar dados da conta</Text>
+          </TouchableOpacity>
         </View>
 
         {usuario.tipo_usuario === "CLIENTE" ? (
@@ -503,22 +498,6 @@ const criarEstilos = (CORES: Cores) =>
   header: {
     alignItems: "center",
     marginBottom: 32,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: CORES.primaria,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: CORES.destaque,
-    marginBottom: 14,
-  },
-  avatarTexto: {
-    color: CORES.sobrePrimaria,
-    fontSize: 26,
-    fontWeight: "800",
   },
   nome: {
     fontSize: 22,
