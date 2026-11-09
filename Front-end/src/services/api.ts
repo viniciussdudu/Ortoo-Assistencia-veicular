@@ -1,3 +1,5 @@
+import { limparToken, obterToken, salvarToken } from "./session";
+
 export type UserType = "CLIENTE" | "PRESTADOR_AUTONOMO" | "EMPRESA";
 export type TipoDocumento = "CPF" | "CNPJ";
 
@@ -26,6 +28,16 @@ export type RegisterInput = {
   longitude_atual?: number;
 };
 
+export type PerfilPrestador = {
+  id: number;
+  nome_fantasia?: string | null;
+  descricao_empresa?: string | null;
+  raio_atendimento_km?: number;
+  disponivel?: boolean;
+  latitude_atual?: number | null;
+  longitude_atual?: number | null;
+};
+
 export type UserProfile = {
   id: number;
   stripe_customer_id?: string | null;
@@ -37,6 +49,21 @@ export type UserProfile = {
   tipo_usuario: UserType;
   foto_url?: string | null;
   criado_em?: string;
+  prestador?: PerfilPrestador | null;
+  veiculo?: { modelo: string; placa: string; cor: string } | null;
+  historico?: Array<{ id: number; data: string; problema: string; status: string }>;
+};
+
+export type UpdateProfileInput = {
+  nome: string;
+  email: string;
+  telefone: string;
+  senha_atual?: string;
+  // Campos de prestador
+  nome_fantasia?: string;
+  descricao_empresa?: string;
+  raio_atendimento_km?: number;
+  disponivel?: boolean;
 };
 
 export class ApiError extends Error {
@@ -49,9 +76,7 @@ export class ApiError extends Error {
   }
 }
 
-const apiUrl = (
-  process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api"
-).replace(/\/$/, "");
+const apiUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
 
 function getApiUrl() {
   if (!apiUrl) {
@@ -63,8 +88,10 @@ function getApiUrl() {
 }
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
+  textBody?: string;
+  signal?: AbortSignal;
 };
 
 async function request<T>(
@@ -72,26 +99,31 @@ async function request<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   let response: Response;
+  const token = await obterToken();
 
   try {
     response = await fetch(`${getApiUrl()}${path}`, {
       method: options.method ?? "GET",
+      signal: options.signal,
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": options.textBody === undefined ? "application/json" : "text/plain",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      ...(options.body === undefined
-        ? {}
-        : { body: JSON.stringify(options.body) }),
+      ...(options.textBody !== undefined ? { body: options.textBody } : options.body === undefined
+      ? {}
+      : { body: JSON.stringify(options.body) }),
     });
-  } catch (erro) {
-    console.log("URL chamada:", `${getApiUrl()}${path}`);
-    console.log("Erro original:", erro);
-    throw new ApiError("Não foi possível conectar à API.");
+  } catch {
+    throw new ApiError("Não foi possível conectar à API. Verifique se o servidor está em execução e se o celular está na mesma rede Wi-Fi.");
   }
 
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
+    // Token enviado e recusado (expirado/inválido): descarta a credencial.
+    if (response.status === 401 && token && path !== "/auth/login") {
+      await limparToken();
+    }
     throw new ApiError(
       payload?.erro ?? "A API retornou um erro.",
       response.status,
@@ -110,11 +142,20 @@ export function register(input: RegisterInput) {
   });
 }
 
-export function login(input: Pick<RegisterInput, "email" | "password">): Promise<RegisteredUser> {
-  return request<RegisteredUser>("/auth/login", {
+export async function login(
+  input: Pick<RegisterInput, "email" | "password">,
+): Promise<RegisteredUser> {
+  const usuario = await request<RegisteredUser>("/auth/login", {
     method: "POST",
     body: input,
   });
+
+  if (!usuario.token) {
+    throw new ApiError("A API não retornou a credencial de acesso.");
+  }
+
+  await salvarToken(usuario.token);
+  return usuario;
 }
 
 export type RecuperarSenhaInput = {
@@ -123,18 +164,44 @@ export type RecuperarSenhaInput = {
 };
 
 export function recuperarSenha(input: RecuperarSenhaInput) {
-  return request<{ sucesso: boolean; mensagem: string }>("/auth/recuperar-senha", {
-    method: "POST",
+  return request<{ sucesso: boolean; mensagem: string }>(
+    "/auth/recuperar-senha",
+    {
+      method: "POST",
+      body: input,
+    },
+  );
+}
+
+export function getUserProfile(usuarioId?: number) {
+  const query = usuarioId ? `?usuario_id=${usuarioId}` : "";
+  return request<UserProfile>(`/usuario/perfil${query}`);
+}
+
+export function updateUserProfile(input: UpdateProfileInput) {
+  return request<{ sucesso: boolean; mensagem: string }>("/usuario/perfil", {
+    method: "PUT",
     body: input,
   });
 }
 
-export function getUserProfile() {
-  return request<UserProfile>("/usuario/perfil");
+export function salvarFotoPerfil(base64: string) {
+  return request<{ foto_url: string }>("/usuario/perfil/foto", { method: "PUT", textBody: base64 });
 }
 
-export function logout() {
-  return request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
+export function enderecoFotoPerfil(foto: string) {
+  return foto.startsWith("/usuario/fotos/") ? `${getApiUrl()}${foto}` : foto;
+}
+
+export async function logout(): Promise<{ sucesso: boolean }> {
+  try {
+    await request<{ sucesso: boolean }>("/auth/logout", { method: "POST" });
+  } catch {
+    // Mesmo sem rede, a sessão local precisa ser encerrada.
+  } finally {
+    await limparToken();
+  }
+  return { sucesso: true };
 }
 
 /* ==================== CATEGORIAS & PRESTADORES ==================== */
@@ -146,8 +213,8 @@ export type Categoria = {
   icone_url?: string | null;
 };
 
-export function listarCategorias() {
-  return request<Categoria[]>("/categorias");
+export function listarCategorias(signal?: AbortSignal) {
+  return request<Categoria[]>("/categorias", { signal });
 }
 
 export type ServicoOferecido = {
@@ -161,6 +228,7 @@ export type ServicoOferecido = {
 export type Prestador = {
   id: number;
   usuario_id: number;
+  nome?: string;
   nome_fantasia?: string | null;
   descricao_empresa?: string | null;
   raio_atendimento_km: number;
@@ -174,31 +242,47 @@ export function listarPrestadores() {
   return request<Prestador[]>("/prestadores");
 }
 
+export function atualizarLocalizacaoPrestador(latitude: number, longitude: number) {
+  return request<{ sucesso: boolean; latitude: number; longitude: number }>(
+    "/prestadores/localizacao",
+    { method: "PUT", body: { latitude, longitude } },
+  );
+}
+
 /* ==================== SOLICITAÇÕES ==================== */
 
-export type StatusSolicitacao =
+export type SolicitacaoStatus =
   | "PENDENTE"
   | "ACEITO"
+  | "A_CAMINHO"
   | "EM_ANDAMENTO"
   | "CONCLUIDO"
   | "CANCELADO";
+
+// Alias para manter compatibilidade com códigos antigos que importem StatusSolicitacao
+export type StatusSolicitacao = SolicitacaoStatus;
 
 export type Solicitacao = {
   id: number;
   cliente_id: number;
   prestador_id?: number | null;
-  categoria_id: number;
-  status: StatusSolicitacao;
+  categoria_id?: number;
+  status: SolicitacaoStatus;
   descricao_problema?: string | null;
   latitude_origem: number | string;
   longitude_origem: number | string;
   valor_estimado?: number | string | null;
   criado_em: string;
   categoria_nome?: string;
+  cliente_nome?: string;
+  cliente_telefone?: string;
+  prestador_nome?: string;
+  prestador_latitude?: number | string | null;
+  prestador_longitude?: number | string | null;
 };
 
 export type CriarSolicitacaoInput = {
-  cliente_id: number;
+  prestador_id: number;
   categoria_id: number;
   descricao_problema?: string;
   latitude_origem: number;
@@ -211,15 +295,63 @@ export function criarSolicitacao(input: CriarSolicitacaoInput) {
 }
 
 export function listarMinhasSolicitacoes(clienteId: number) {
-  return request<Solicitacao[]>(`/solicitacoes?cliente_id=${clienteId}`);
+  return request<Solicitacao[]>(`/solicitacoes?cliente_id=${encodeURIComponent(clienteId)}`);
 }
 
 export function cancelarSolicitacao(id: number) {
-  // Ajustado para PATCH na rota individual por ID
   return request<{ sucesso: boolean; mensagem: string }>(
     `/solicitacoes/${id}/cancelar`,
-    { method: "PATCH" }
+    { method: "PATCH" },
   );
+}
+
+export function listarSolicitacoesPendentes() {
+  return request<Solicitacao[]>("/solicitacoes/pendentes");
+}
+
+export function buscarSolicitacaoPorId(id: number) {
+  return request<Solicitacao>(`/solicitacoes/${id}`);
+}
+
+export function atualizarStatusSolicitacao(
+  id: number,
+  status: SolicitacaoStatus,
+  prestador_id?: number,
+) {
+  return request<{ sucesso: boolean; status: string }>(
+    `/solicitacoes/${id}/status`,
+    {
+      method: "PATCH",
+      body: { status, prestador_id },
+    },
+  );
+}
+
+/* ==================== CHAT DO ATENDIMENTO ==================== */
+
+export type MensagemChat = {
+  id: number;
+  remetente_id: number;
+  remetente_nome: string;
+  conteudo: string;
+  criado_em: string;
+};
+
+export type ConversaAtendimento = {
+  solicitacao_id: number;
+  prestador: { nome: string };
+  mensagens: MensagemChat[];
+};
+
+export function listarMensagensChat(solicitacaoId: number) {
+  return request<ConversaAtendimento>(`/solicitacoes/${solicitacaoId}/chat`);
+}
+
+export function enviarMensagemChat(solicitacaoId: number, conteudo: string) {
+  return request<MensagemChat>(`/solicitacoes/${solicitacaoId}/chat`, {
+    method: "POST",
+    body: { conteudo },
+  });
 }
 
 /* ==================== CARTÕES & STRIPE ==================== */
@@ -240,7 +372,7 @@ export type CartaoUsuario = {
 
 export type SalvarCartaoInput = {
   usuario_id: number;
-  payment_method_id: string;
+  setup_intent_id: string;
   ultimos_digitos?: string;
   bandeira?: string;
   validade_mes?: number;
@@ -250,7 +382,7 @@ export type SalvarCartaoInput = {
 };
 
 export function criarSetupIntentCartao(usuarioId: number) {
-  return request<{ client_secret: string }>("/pagamento/novo-cartao", {
+  return request<{ client_secret: string; setup_intent_id: string }>("/pagamento/novo-cartao", {
     method: "POST",
     body: { usuario_id: usuarioId },
   });
@@ -267,5 +399,91 @@ export function salvarCartao(input: SalvarCartaoInput) {
 }
 
 export function listarCartoes(usuarioId: number) {
-  return request<CartaoUsuario[]>(`/pagamento/cartoes?usuario_id=${usuarioId}`);
+  return request<CartaoUsuario[]>(`/pagamento/cartoes?usuario_id=${encodeURIComponent(usuarioId)}`);
+}
+
+export type TipoVeiculo = "CARRO" | "MOTO" | "BICICLETA" | "BIKE_ELETRICA" | "CAMINHAO";
+
+export type Veiculo = {
+  id: number;
+  tipo: TipoVeiculo;
+  marca: string | null;
+  modelo: string;
+  ano: number | null;
+  placa: string | null;
+  cor: string | null;
+  km_atual: number;
+  km_atualizado_em: string;
+};
+
+export type Manutencao = {
+  id: number;
+  tipo: string;
+  descricao: string | null;
+  km_na_execucao: number | null;
+  custo: string | null;
+  executado_em: string;
+};
+
+export type VeiculoDetalhado = Veiculo & { manutencoes: Manutencao[] };
+
+export function listarVeiculos(usuarioId: number) {
+  return request<Veiculo[]>(`/veiculos?usuario_id=${usuarioId}`);
+}
+
+export function obterVeiculo(id: number) {
+  return request<VeiculoDetalhado>(`/veiculos/${id}`);
+}
+
+export function criarVeiculo(input: {
+  usuario_id: number;
+  tipo?: TipoVeiculo;
+  marca?: string;
+  modelo: string;
+  ano?: number;
+  placa?: string;
+  cor?: string;
+  km_atual?: number;
+}) {
+  return request<Veiculo>("/veiculos", { method: "POST", body: input });
+}
+
+export function atualizarQuilometragem(id: number, km_atual: number) {
+  return request<{ sucesso: boolean; km_atual: number }>(
+    `/veiculos/${id}/quilometragem`,
+    { method: "PATCH", body: { km_atual } },
+  );
+}
+
+// O backend descobre o prestador pelo token; o app não envia prestador_id.
+export type CadastrarServicoInput = {
+  categoria_id: number;
+  preco_base: number;
+};
+
+export function cadastrarServico(input: CadastrarServicoInput) {
+  return request<ServicoOferecido>("/servicos", { method: "POST", body: input });
+}
+
+/* ==================== SUPORTE CENTRAL ==================== */
+
+export type TipoRemetenteSuporte = "USUARIO" | "SUPORTE";
+
+export type MensagemSuporte = {
+  id: number;
+  usuario_id: number;
+  remetente_tipo: TipoRemetenteSuporte;
+  conteudo: string;
+  criado_em: string;
+};
+
+export function listarMensagensSuporte() {
+  return request<MensagemSuporte[]>("/suporte/mensagens");
+}
+
+export function enviarMensagemSuporte(conteudo: string) {
+  return request<MensagemSuporte>("/suporte/mensagens", {
+    method: "POST",
+    body: { conteudo },
+  });
 }

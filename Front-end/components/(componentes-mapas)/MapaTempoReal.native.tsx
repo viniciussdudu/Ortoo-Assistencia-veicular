@@ -3,6 +3,7 @@ import { StyleSheet, View, Text } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { MapaTempoRealProps, Coordenada } from "./types";
+import { Cores, useEstilos, useTema } from "../../src/tema";
 
 const UBER_DARK_STYLE = [
   { elementType: "geometry", stylers: [{ color: "#212121" }] },
@@ -45,6 +46,8 @@ export default function MapaTempoReal({
   clienteLocation,
   mecanicoLocation,
 }: MapaTempoRealProps) {
+  const { cores: CORES, escuro } = useTema();
+  const styles = useEstilos(criarEstilos);
   const mapRef = useRef<MapView | null>(null);
   const [rotaCoords, setRotaCoords] = useState<Coordenada[]>([]);
   const [shouldTrackChanges, setShouldTrackChanges] = useState(true);
@@ -149,7 +152,7 @@ export default function MapaTempoReal({
         ref={mapRef}
         style={styles.mapa}
         provider={PROVIDER_GOOGLE}
-        customMapStyle={UBER_DARK_STYLE}
+        customMapStyle={escuro ? UBER_DARK_STYLE : []}
         showsPointsOfInterest={false}
         showsBuildings={false}
         showsCompass={false}
@@ -161,7 +164,7 @@ export default function MapaTempoReal({
         {mecanicoLocation && rotaCoords.length > 0 && (
           <Polyline
             coordinates={rotaCoords}
-            strokeColor="#2563eb"
+            strokeColor={CORES.destaque}
             strokeWidth={5}
           />
         )}
@@ -194,7 +197,7 @@ export default function MapaTempoReal({
             tracksViewChanges={shouldTrackChanges}
           >
             <View style={styles.marcadorMecanicoContainer}>
-              <FontAwesome5 name="wrench" size={14} color="#ffffff" />
+              <FontAwesome5 name="wrench" size={14} color={CORES.sobrePrimaria} />
             </View>
           </Marker>
         )}
@@ -204,7 +207,7 @@ export default function MapaTempoReal({
       {distanciaRua && (
         <View style={styles.cardInfoRota}>
           <View style={styles.infoBloco}>
-            <FontAwesome5 name="route" size={14} color="#2563eb" />
+            <FontAwesome5 name="route" size={14} color={CORES.destaque} />
             <Text style={styles.textoInfo}>{distanciaRua}</Text>
           </View>
 
@@ -212,7 +215,7 @@ export default function MapaTempoReal({
             <>
               <View style={styles.divisor} />
               <View style={styles.infoBloco}>
-                <FontAwesome5 name="clock" size={14} color="#10b981" />
+                <FontAwesome5 name="clock" size={14} color={CORES.sucesso} />
                 <Text style={styles.textoInfo}>{tempoEstimado}</Text>
               </View>
             </>
@@ -223,7 +226,8 @@ export default function MapaTempoReal({
   );
 }
 
-const styles = StyleSheet.create({
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     width: "100%",
@@ -242,7 +246,7 @@ const styles = StyleSheet.create({
   marcadorCliente: {
     width: 18,
     height: 18,
-    backgroundColor: "#2563eb",
+    backgroundColor: CORES.primaria,
     borderRadius: 9,
     borderWidth: 3,
     borderColor: "#ffffff",
@@ -251,7 +255,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#f59e0b",
+    backgroundColor: CORES.destaque,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
@@ -261,7 +265,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 50,
     alignSelf: "center",
-    backgroundColor: "#1e293b",
+    backgroundColor: CORES.cartao,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -281,11 +285,11 @@ const styles = StyleSheet.create({
   divisor: {
     width: 1,
     height: 16,
-    backgroundColor: "#475569",
+    backgroundColor: CORES.borda,
     marginHorizontal: 12,
   },
   textoInfo: {
-    color: "#ffffff",
+    color: CORES.texto,
     fontWeight: "bold",
     fontSize: 14,
   },

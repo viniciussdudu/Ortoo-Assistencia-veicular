@@ -1,11 +1,16 @@
 const express = require("express");
 const db = require("../config/db");
+const { requireAuth } = require("../middlewares/auth");
 
 const prestadorController = require("../controllers/prestadorControllers");
 const authController = require("../controllers/authController");
 const userController = require("../controllers/userController");
+const { pastaFotos, salvarFoto } = require("../controllers/fotoPerfilController");
 const solicitacaoController = require("../controllers/solicitacaoController");
 const paymentController = require("../controllers/paymentController");
+const veiculoController = require("../controllers/veiculoController");
+const chatController = require("../controllers/chatController");
+const suporteController = require("../controllers/suporteController");
 
 const router = express.Router();
 
@@ -29,14 +34,30 @@ router.post("/auth/login", authController.login);
 router.post("/auth/logout", authController.logout);
 router.post("/auth/recuperar-senha", authController.recuperarSenha);
 
+// Conversa vinculada ao atendimento: somente cliente e prestador participantes.
+router.get("/solicitacoes/:id/chat", requireAuth, chatController.listarMensagens);
+router.post("/solicitacoes/:id/chat", requireAuth, chatController.enviarMensagem);
+
 // Rotas de Usuário / Perfil
-router.get("/usuario/perfil", userController.getProfile);
+router.get("/usuario/perfil", requireAuth, userController.getProfile);
+router.put("/usuario/perfil", requireAuth, userController.updateProfile);
+router.put("/usuario/perfil/foto", requireAuth, express.text({ limit: "7mb" }), salvarFoto);
+router.use("/usuario/fotos", express.static(pastaFotos, {
+  index: false,
+  redirect: false,
+  setHeaders(res) { res.setHeader("X-Content-Type-Options", "nosniff"); },
+}));
 
 // Rotas de Solicitações e Categorias
 router.get("/categorias", solicitacaoController.listarCategorias);
-router.post("/solicitacoes", solicitacaoController.criarSolicitacao);
-router.get("/solicitacoes", solicitacaoController.listarSolicitacoesCliente);
+router.post("/solicitacoes", requireAuth, solicitacaoController.criarSolicitacao);
+router.get("/solicitacoes", requireAuth, solicitacaoController.listarSolicitacoesCliente);
 router.patch("/solicitacoes/:id/cancelar", solicitacaoController.cancelarSolicitacao);
+
+// Rotas de acompanhamento de solicitações
+router.get("/solicitacoes/pendentes", requireAuth, solicitacaoController.listarPendentes);
+router.get("/solicitacoes/:id", solicitacaoController.buscarPorId);
+router.patch("/solicitacoes/:id/status", solicitacaoController.atualizarStatus);
 
 // Rota para cancelar solicitações pendentes por cliente_id via POST
 router.post("/solicitacoes/cancelar", async (req, res) => {
@@ -59,6 +80,8 @@ router.post("/solicitacoes/cancelar", async (req, res) => {
 
 // Rotas de Prestadores
 router.get("/prestadores", prestadorController.listarPrestadores);
+router.put("/prestadores/localizacao", requireAuth, prestadorController.atualizarLocalizacao);
+router.post("/servicos", requireAuth, prestadorController.cadastrarServico);
 
 // Rota para listar prestadores por categoria de serviço
 router.get("/prestadores/categoria/:categoria_id", async (req, res) => {
@@ -101,5 +124,16 @@ router.get("/pagamento/cartoes", paymentController.listarCartoes);
 router.post("/pagamento/solicitar-transacao", paymentController.criarTransacao);
 router.post("/pagamento/transacoes", paymentController.criarTransacao); // Alias para suportar ambas as chamadas
 router.post("/pagamento/cobrar", paymentController.cobrarCartao);
+
+//cadastro de veiculo
+router.get("/veiculos", veiculoController.listarVeiculos);
+router.post("/veiculos", veiculoController.criarVeiculo);
+router.get("/veiculos/:id", veiculoController.obterVeiculo);
+router.patch("/veiculos/:id/quilometragem", veiculoController.atualizarQuilometragem);
+router.post("/veiculos/:id/manutencoes", veiculoController.registrarManutencao);
+
+// Rotas de Suporte Geral ao Cliente/Prestador
+router.get("/suporte/mensagens", requireAuth, suporteController.listarMensagens);
+router.post("/suporte/mensagens", requireAuth, suporteController.enviarMensagem);
 
 module.exports = router;

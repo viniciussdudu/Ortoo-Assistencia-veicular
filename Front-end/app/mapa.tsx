@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,8 +14,8 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import MapaTempoReal from "../components/(componentes-mapas)/MapaTempoReal";
 import { ShowAlert } from "@/components/alert";
+import MapaTempoReal from "../components/(componentes-mapas)/MapaTempoReal";
 
 // Importações centralizadas do arquivo de serviços
 import {
@@ -23,15 +23,17 @@ import {
   CartaoUsuario,
   criarSolicitacao,
   listarCartoes,
-  listarMinhasSolicitacoes,
   Prestador,
 } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
 // TODO: substituir pelo ID do usuário logado na sessão real
 const CLIENTE_ID = 1;
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:3000/api";
 
 export default function TelaMapa() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -49,26 +51,7 @@ export default function TelaMapa() {
   const [carregandoPrestadores, setCarregandoPrestadores] = useState(true);
   const [prestadorSelecionado, setPrestadorSelecionado] = useState<Prestador | null>(null);
 
-  // Referência mutável para acessar o ID da solicitação atualizado no cleanup de desmontagem
-  const solicitacaoIdRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    solicitacaoIdRef.current = solicitacaoId;
-  }, [solicitacaoId]);
-
-  // 1. CANCELAMENTO AUTOMÁTICO NA DESMONTAGEM DA TELA (Ao sair do Mapa por qualquer via)
-  useEffect(() => {
-    return () => {
-      if (solicitacaoIdRef.current) {
-        const idParaCancelar = solicitacaoIdRef.current;
-        cancelarSolicitacao(idParaCancelar)
-          .then(() => console.log(`✅ Solicitação ${idParaCancelar} cancelada automaticamente ao sair da tela.`))
-          .catch((err) => console.error("Erro ao cancelar solicitação ao sair:", err));
-      }
-    };
-  }, []);
-
-  // 2. TRATAMENTO DO BOTÃO VOLTAR FÍSICO / GESTOS DO DISPOSITIVO
+  // 1. TRATAMENTO DO BOTÃO VOLTAR FÍSICO / GESTOS DO DISPOSITIVO
   useEffect(() => {
     const onBackPress = () => {
       if (solicitacaoId) {
@@ -98,7 +81,7 @@ export default function TelaMapa() {
     router.back();
   };
 
-  // 3. Monitoramento do GPS do Cliente
+  // 2. Monitoramento do GPS do Cliente
   useEffect(() => {
     let inscricaoGPS: Location.LocationSubscription | null = null;
 
@@ -179,7 +162,7 @@ export default function TelaMapa() {
     return {
       latitude: lat,
       longitude: lng,
-      heading: 0,
+      headin: 0,
     };
   }, [prestadorSelecionado?.latitude_atual, prestadorSelecionado?.longitude_atual]);
 
@@ -235,107 +218,117 @@ export default function TelaMapa() {
   }
 
   // Função disparada ao clicar no botão 'Chamar'
-  async function handleChamarPrestador(item: Prestador) {
-    const prestadorId = item.id || (item as any).prestador_id;
-    console.log("👉 Botão Chamar clicado para o prestador:", prestadorId);
+async function handleChamarPrestador(item: Prestador) {
+  const prestadorId = item.id || (item as any).prestador_id;
+  console.log("👉 Botão Chamar clicado para o prestador:", prestadorId);
 
-    setPrestadorSelecionado(item);
+  setPrestadorSelecionado(item);
 
-    if (!clienteCoords) {
-      ShowAlert("Atenção", "Obtendo localização do GPS...");
-      return;
-    }
-
-    try {
-      // 1. Tenta criar uma nova solicitação no backend
-      const novaSolicitacao = await criarSolicitacao({
-        cliente_id: CLIENTE_ID,
-        categoria_id: Number(categoria_id) || 1,
-        latitude_origem: clienteCoords.latitude,
-        longitude_origem: clienteCoords.longitude,
-        descricao_problema: "Solicitação via Mapa",
-      });
-
-      if (novaSolicitacao?.id) {
-        setSolicitacaoId(novaSolicitacao.id);
-        setMostrarPagamentos(true);
-        console.log("✅ Nova solicitação criada. ID:", novaSolicitacao.id);
-      }
-    } catch (error: any) {
-      // 2. Se já existir uma solicitação em andamento, busca a solicitação ativa
-      if (
-        error?.message?.includes("solicitacao em andamento") ||
-        error?.message?.includes("já possui")
-      ) {
-        try {
-          const solicitacoes = await listarMinhasSolicitacoes(CLIENTE_ID);
-
-          const ativa = solicitacoes.find(
-            (s) =>
-              s.status === "PENDENTE" ||
-              s.status === "ACEITO" ||
-              s.status === "EM_ANDAMENTO"
-          );
-
-          if (ativa?.id) {
-            setSolicitacaoId(ativa.id);
-            setMostrarPagamentos(true);
-            console.log("🔄 Solicitação ativa recuperada. ID:", ativa.id);
-            return;
-          }
-        } catch (errBusca) {
-          console.error("Erro ao buscar solicitações ativas:", errBusca);
-        }
-      }
-
-      Alert.alert(
-        "Erro",
-        error?.message || "Não foi possível processar a solicitação."
-      );
-    }
+  if (!clienteCoords) {
+    ShowAlert("Atenção", "Obtendo localização do GPS...");
+    return;
   }
 
-  async function processarPagamento(metodo: "PIX" | "DINHEIRO" | "CARTAO" = "PIX") {
-    if (!solicitacaoId) {
-      ShowAlert("Erro", "Crie uma solicitação antes de pagar.");
-      return;
-    }
+  try {
+    // 1. Tenta criar uma nova solicitação no backend
+    const novaSolicitacao = await criarSolicitacao({
+      prestador_id: Number(prestadorId),
+      categoria_id: Number(categoria_id) || 1,
+      latitude_origem: clienteCoords.latitude,
+      longitude_origem: clienteCoords.longitude,
+      descricao_problema: "Solicitação via Mapa",
+    });
 
-    setProcessandoPagamento(true);
-
-    try {
-      const response = await fetch(`${API_URL}/pagamento/transacoes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ solicitacao_id: solicitacaoId }),
-      });
-      const transacao = await response.json();
-
-      if (!response.ok) {
-        throw new Error(transacao.erro || "Não foi possível criar a transação.");
-      }
-
-      await realizarPagamento(transacao.id, metodo);
-      setMostrarPagamentos(false);
+    if (novaSolicitacao?.id) {
+      console.log("✅ Nova solicitação criada com sucesso! ID:", novaSolicitacao.id);
       
-      // Limpa a solicitação do estado local após o pagamento concluído
-      setSolicitacaoId(null);
-      Alert.alert("Sucesso", "Pagamento realizado com sucesso!");
-    } catch (error) {
-      Alert.alert(
-        "Erro no pagamento",
-        error instanceof Error ? error.message : "Tente novamente."
-      );
-    } finally {
-      setProcessandoPagamento(false);
+      // Atualiza o estado React
+      setSolicitacaoId(novaSolicitacao.id);
+      
+      // Abre a barra de pagamentos
+      setMostrarPagamentos(true);
+    } else {
+      Alert.alert("Erro", "O servidor criou o chamado mas não retornou a ID da solicitação.");
     }
+  } catch (error: any) {
+    Alert.alert(
+      "Erro",
+      error?.message || "Não foi possível processar a solicitação."
+    );
   }
+}
+
+async function processarPagamento(metodo: "PIX" | "DINHEIRO" | "CARTAO" = "PIX") {
+  const idParaPagar = solicitacaoId;
+
+  if (!idParaPagar) {
+    Alert.alert("Atenção", "Solicitação não encontrada. Por favor, clique em 'Chamar' novamente.");
+    return;
+  }
+
+  setProcessandoPagamento(true);
+
+  try {
+    console.log(`💳 Enviando transação para a solicitação ID: ${idParaPagar} via ${metodo}`);
+
+    const response = await fetch(`${API_URL}/pagamento/transacoes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        solicitacao_id: idParaPagar,
+        usuario_id: CLIENTE_ID,
+      }),
+    });
+
+    const transacao = await response.json();
+
+    if (!response.ok) {
+      throw new Error(transacao.erro || "Não foi possível criar a transação no servidor.");
+    }
+
+    // Processa a cobrança
+    await realizarPagamento(transacao.id, metodo);
+
+    // Salva os dados do prestador antes de resetar o estado local
+    const nomeVendedor =
+      prestadorSelecionado?.nome_fantasia ||
+      (prestadorSelecionado as any)?.nome ||
+      `Prestador #${prestadorSelecionado?.id}`;
+
+    setMostrarPagamentos(false);
+    setSolicitacaoId(null);
+
+    // Exibe o alerta de sucesso e redireciona para o status do atendimento
+    Alert.alert("Sucesso", "Pagamento realizado com sucesso!", [
+      {
+        text: "Acompanhar Atendimento",
+        onPress: () => {
+          router.push({
+            pathname: "/status-atendimento",
+            params: {
+              solicitacaoId: String(idParaPagar),
+              vendedor: nomeVendedor,
+            },
+          });
+        },
+      },
+    ]);
+  } catch (error) {
+    Alert.alert(
+      "Erro no pagamento",
+      error instanceof Error ? error.message : "Tente novamente."
+    );
+  } finally {
+    setProcessandoPagamento(false);
+  }
+}
+  
 
   if (!clienteCoords && !erroGps) {
     return (
       <View style={styles.carregandoContainer}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ActivityIndicator size="large" color="#fcf7f7" />
+        <ActivityIndicator size="large" color={CORES.destaque} />
         <Text style={styles.textoCarregando}>Obtendo sua localização...</Text>
       </View>
     );
@@ -368,7 +361,7 @@ export default function TelaMapa() {
           <Text style={styles.tituloPainel}>Empresas Disponíveis</Text>
 
           {carregandoPrestadores ? (
-            <ActivityIndicator size="small" color="#ffffff" style={{ marginVertical: 20 }} />
+            <ActivityIndicator size="small" color={CORES.destaque} style={{ marginVertical: 20 }} />
           ) : prestadores.length === 0 ? (
             <Text style={styles.textoVazio}>Nenhuma empresa disponível para este serviço no momento.</Text>
           ) : (
@@ -442,7 +435,7 @@ export default function TelaMapa() {
               disabled={processandoPagamento}
             >
               {processandoPagamento ? (
-                <ActivityIndicator size="small" color="#38bdf8" />
+                <ActivityIndicator size="small" color={CORES.destaque} />
               ) : (
                 <>
                   <Text style={styles.iconePagamento}>PIX</Text>
@@ -454,7 +447,7 @@ export default function TelaMapa() {
             {/* Opção Cartões de Crédito */}
             {carregandoCartoes ? (
               <View style={styles.opcaoPagamento}>
-                <ActivityIndicator size="small" color="#38bdf8" />
+                <ActivityIndicator size="small" color={CORES.destaque} />
                 <Text style={styles.textoOpcaoPagamento}>Cartões</Text>
               </View>
             ) : (
@@ -488,67 +481,77 @@ export default function TelaMapa() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
+  container: { flex: 1, backgroundColor: CORES.fundo },
   carregandoContainer: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: CORES.fundo,
     justifyContent: "center",
     alignItems: "center",
   },
-  textoCarregando: { color: "#fff", marginTop: 12, fontSize: 14 },
+  textoCarregando: { color: CORES.texto, marginTop: 12, fontSize: 14 },
   overlay: { flex: 1, justifyContent: "space-between" },
   botaoVoltar: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(5, 5, 5, 0.9)",
+    backgroundColor: CORES.cartao,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     marginLeft: 16,
     elevation: 4,
   },
-  voltarTexto: { color: "#ffffff", fontWeight: "600", fontSize: 14 },
+  voltarTexto: { color: CORES.texto, fontWeight: "600", fontSize: 14 },
   painelInferior: { paddingVertical: 16 },
   tituloPainel: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#ffffff",
+    color: CORES.texto,
     marginLeft: 16,
     marginBottom: 12,
   },
   textoVazio: {
-    color: "#9ca3af",
+    color: CORES.textoSuave,
     marginLeft: 16,
     fontSize: 14,
   },
   listaHorizontal: { paddingHorizontal: 16, gap: 12 },
   cardMecanico: {
     width: 220,
-    backgroundColor: "#080808",
+    backgroundColor: CORES.cartao,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
     borderColor: "transparent",
   },
   cardSelecionado: {
-    borderColor: "#2563eb",
-    backgroundColor: "#111827",
+    borderColor: CORES.primaria,
+    backgroundColor: CORES.cartao,
   },
-  nomeMecanico: { fontSize: 15, fontWeight: "bold", color: "#ffffff" },
-  infoMecanico: { fontSize: 13, color: "#38bdf8", marginTop: 4, marginBottom: 12 },
+  nomeMecanico: { fontSize: 15, fontWeight: "bold", color: CORES.texto },
+  infoMecanico: { fontSize: 13, color: CORES.destaque, marginTop: 4, marginBottom: 12 },
   botaoChamar: {
-    backgroundColor: "#2563eb",
+    backgroundColor: CORES.primaria,
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: "center",
   },
-  textoBotao: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  textoBotao: { color: CORES.sobrePrimaria, fontWeight: "600", fontSize: 13 },
+  botaoChat: {
+    borderWidth: 1,
+    borderColor: CORES.primaria,
+    paddingVertical: 9,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  textoBotaoChat: { color: CORES.destaque, fontWeight: "600", fontSize: 13 },
   barraPagamento: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#111827",
+    backgroundColor: CORES.cartao,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     paddingHorizontal: 20,
@@ -566,20 +569,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  tituloPagamento: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  tituloPagamento: { color: CORES.texto, fontSize: 16, fontWeight: "700" },
   botaoFechar: { padding: 4 },
-  textoFechar: { color: "#9ca3af", fontSize: 16, fontWeight: "700" },
+  textoFechar: { color: CORES.textoSuave, fontSize: 16, fontWeight: "700" },
   opcoesPagamento: { flexDirection: "row", gap: 10 },
   opcaoPagamento: {
     flex: 1,
     minHeight: 76,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1f2937",
+    backgroundColor: CORES.fundo,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: CORES.borda,
   },
-  iconePagamento: { color: "#38bdf8", fontSize: 14, fontWeight: "800", marginBottom: 6 },
-  textoOpcaoPagamento: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  iconePagamento: { color: CORES.destaque, fontSize: 14, fontWeight: "800", marginBottom: 6 },
+  textoOpcaoPagamento: { color: CORES.texto, fontSize: 13, fontWeight: "600" },
 });

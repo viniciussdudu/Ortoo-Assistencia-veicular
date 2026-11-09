@@ -15,8 +15,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ShowAlert } from "../components/alert";
 import { ApiError, login } from "../src/services/api";
+import { Cores, useEstilos, useTema } from "../src/tema";
 
 export default function Index() {
+  const { cores: CORES } = useTema();
+  const styles = useEstilos(criarEstilos);
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -76,7 +79,7 @@ export default function Index() {
               <TextInput
                 style={styles.input}
                 placeholder="seu.email@exemplo.com"
-                placeholderTextColor="#6b7280"
+                placeholderTextColor={CORES.textoSuave}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -89,7 +92,7 @@ export default function Index() {
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
-                placeholderTextColor="#6b7280"
+                placeholderTextColor={CORES.textoSuave}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -109,7 +112,7 @@ export default function Index() {
               activeOpacity={0.8}
             >
               {submitting ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={CORES.sobrePrimaria} size="small" />
               ) : (
                 <Text style={styles.buttonText}>Entrar</Text>
               )}
@@ -136,10 +139,11 @@ export default function Index() {
   );
 }
 
-const styles = StyleSheet.create({
+const criarEstilos = (CORES: Cores) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: CORES.fundo,
   },
   keyboardView: {
     flex: 1,
@@ -162,12 +166,12 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 40,
     fontWeight: "800",
-    color: "#ffffff",
+    color: CORES.texto,
     letterSpacing: -1,
   },
   subtitle: {
     fontSize: 14,
-    color: "#9ca3af",
+    color: CORES.textoSuave,
     textAlign: "center",
     marginTop: 8,
   },
@@ -177,17 +181,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#d1d5db",
+    color: CORES.textoSuave,
     marginBottom: 6,
   },
   input: {
     height: 52,
-    backgroundColor: "#111827",
-    borderColor: "#1f2937",
+    backgroundColor: CORES.cartao,
+    borderColor: CORES.borda,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 16,
-    color: "#ffffff",
+    color: CORES.texto,
     fontSize: 15,
   },
   esqueciSenhaBtn: {
@@ -195,29 +199,30 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   esqueciSenhaTexto: {
-    color: "#38bdf8",
+    color: CORES.destaque,
     fontSize: 13,
     fontWeight: "500",
   },
   button: {
     height: 52,
-    backgroundColor: "#2563eb",
+    backgroundColor: CORES.primaria,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#2563eb",
+    shadowColor: CORES.primaria,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   buttonDisabled: {
-    backgroundColor: "#1f2937",
+    backgroundColor: CORES.primaria,
+    opacity: 0.5,
     shadowOpacity: 0,
     elevation: 0,
   },
   buttonText: {
-    color: "#ffffff",
+    color: CORES.sobrePrimaria,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -228,11 +233,11 @@ const styles = StyleSheet.create({
     marginTop: 28,
   },
   footerText: {
-    color: "#9ca3af",
+    color: CORES.textoSuave,
     fontSize: 14,
   },
   linkTexto: {
-    color: "#38bdf8",
+    color: CORES.destaque,
     fontSize: 14,
     fontWeight: "700",
   },

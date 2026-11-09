@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS solicitacoes (
     cliente_id INT NOT NULL,
     prestador_id INT,
     categoria_id INT NOT NULL,
-    status ENUM('PENDENTE', 'ACEITO', 'EM_ANDAMENTO', 'CONCLUIDO', 'CANCELADO') DEFAULT 'PENDENTE',
+    status ENUM('PENDENTE', 'ACEITO', 'A_CAMINHO', 'EM_ANDAMENTO', 'CONCLUIDO', 'CANCELADO') DEFAULT 'PENDENTE',
     descricao_problema TEXT,
     latitude_origem DECIMAL(10, 8) NOT NULL,
     longitude_origem DECIMAL(11, 8) NOT NULL,
@@ -59,6 +59,18 @@ CREATE TABLE IF NOT EXISTS solicitacoes (
     FOREIGN KEY (cliente_id) REFERENCES usuarios(id),
     FOREIGN KEY (prestador_id) REFERENCES perfis_prestadores(id),
     FOREIGN KEY (categoria_id) REFERENCES categorias_servico(id)
+);
+
+-- 5.1 Mensagens trocadas entre o cliente e o prestador de uma solicitação
+CREATE TABLE IF NOT EXISTS mensagens_chat (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    solicitacao_id INT NOT NULL,
+    remetente_id INT NOT NULL,
+    conteudo TEXT NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (solicitacao_id) REFERENCES solicitacoes(id) ON DELETE CASCADE,
+    FOREIGN KEY (remetente_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    INDEX idx_mensagens_chat_solicitacao_data (solicitacao_id, criado_em)
 );
 
 -- 6. Cartões do Usuário usando Stripe
@@ -73,7 +85,7 @@ CREATE TABLE IF NOT EXISTS cartoes_usuario (
     validade_mes TINYINT,
     validade_ano SMALLINT,
     apelido VARCHAR(50),
-    principal BOOLEAN DEFAULT FALSE,
+    principal BOOLEAN DEFAULT TRUE,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
@@ -88,4 +100,46 @@ CREATE TABLE IF NOT EXISTS transacoes (
     status VARCHAR(30) NOT NULL, -- succeeded, failed, pending
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (solicitacao_id) REFERENCES solicitacoes(id)
+);
+
+-- 8. Veículos do cliente
+CREATE TABLE IF NOT EXISTS veiculos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    tipo ENUM('CARRO','MOTO','BICICLETA','BIKE_ELETRICA','CAMINHAO') NOT NULL DEFAULT 'CARRO',
+    marca VARCHAR(50),
+    modelo VARCHAR(50) NOT NULL,
+    ano INT,
+    placa VARCHAR(10),
+    cor VARCHAR(30),
+    km_atual INT DEFAULT 0,
+    km_atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- 9. Manutenções registradas no veículo
+CREATE TABLE IF NOT EXISTS manutencoes_veiculo (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    veiculo_id INT NOT NULL,
+    solicitacao_id INT NULL,
+    tipo VARCHAR(50) NOT NULL,
+    descricao TEXT,
+    km_na_execucao INT,
+    custo DECIMAL(10,2),
+    executado_em DATE NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (veiculo_id) REFERENCES veiculos(id) ON DELETE CASCADE,
+    FOREIGN KEY (solicitacao_id) REFERENCES solicitacoes(id)
+);
+
+-- 10. Tabela de Mensagens do Chat de Suporte Central
+CREATE TABLE IF NOT EXISTS suporte_mensagens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    remetente_tipo ENUM('USUARIO', 'SUPORTE') NOT NULL DEFAULT 'USUARIO',
+    conteudo TEXT NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    INDEX idx_suporte_usuario_data (usuario_id, criado_em)
 );
